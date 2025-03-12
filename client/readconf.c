@@ -5,8 +5,8 @@
 #include "common.h"
 #include "readconf.h"
 
-char clientip[16] = {0,};
-char serverip[16] = {0,};
+char clientip[IP_LEN] = {0,};
+char serverip[IP_LEN] = {0,};
 unsigned short serverport = DEFAULT_SERVER_PORT;
 
 void fill_client_conf_value()
@@ -29,22 +29,19 @@ void fill_client_conf_value()
 
     if (client_ip)
     {
-        printf("client_ip: [%s]\n", client_ip);
         strcpy(clientip, client_ip);
-        free(client_ip);
+        FREE(client_ip);
     }
 
     if (server_ip)
     {
-        printf("server_ip: [%s]\n", server_ip);
         strcpy(serverip, server_ip);
-        free(server_ip);
+        FREE(server_ip);
     }
 
     if (server_port)
     {
-        printf("server_port: [%u]\n", *server_port);
         serverport = *server_port;
-        free(server_port);
+        FREE(server_port);
     }
 }

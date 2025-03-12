@@ -14,10 +14,10 @@
 SSL_CTX *ctx = NULL;
 SSL     *ssl = NULL;
 
-extern int client_sock;
+int client_sock = -1;
 
-extern char clientip[16];
-extern char serverip[16];
+extern char clientip[IP_LEN];
+extern char serverip[IP_LEN];
 extern unsigned short serverport;
 
 int chat_client_init()
@@ -35,53 +35,52 @@ int chat_client_init()
     if (ssl == NULL)
     {
         perror("SSL_new");
-        goto CLEAN_UP;
+        return chat_client_end();
     }
 
     client_sock = create_sock(AF_INET, SOCK_STREAM, 0);
     if (client_sock < 0)
     {
         perror("create_sock");
-        goto CLEAN_UP;
+        return chat_client_end();
     }
 
     if ( tcp_client_process(client_sock, serverport, serverip) != 0 )
     {
         perror("tcp_client_process");
-        goto CLEAN_UP;
+        return chat_client_end();
     }
 
     if (SSL_set_fd(ssl, client_sock) == 0)
     {
         fprintf(stderr, "SSL_set_fd failed\n");
-        goto CLEAN_UP;
+        return chat_client_end();
     }
 
     if (SSL_connect(ssl) <= 0)
     {
         ERR_print_errors_fp(stderr);
-        goto CLEAN_UP;
+        return chat_client_end();
     }
 
-    printf("[%s] success \n", __FUNCTION__);
-
     return 0;
-
-CLEAN_UP :
-    cleanup_ssl(&ssl, &ctx);
-
-    if (client_sock)
-        close_sock(&client_sock);
-
-    exit(1);
 }
 
-void chat_client_end()
+int chat_client_end()
 {
+    if (ssl)
+    {
+        if (SSL_shutdown(ssl) < 0)
+        {
+            perror("SSL shutdown failed");
+        }
+    }
     cleanup_ssl(&ssl, &ctx);
 
     if (client_sock)
         close_sock(&client_sock);
+
+    return -1;
 }
 
 int join_con_req(const char *id, const char *passwd)

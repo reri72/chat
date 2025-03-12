@@ -4,15 +4,16 @@ LDFLAGS = -L./libs/reriutils
 LDLIBS = -lreriutils -lpthread -lssl -lcrypto
 
 SERVER_SRC = \
+			server/main.c \
 			server/readconf.c \
-			server/server_con.c \
-			server/main.c
+			server/server_con.c
+
 			
 CLIENT_SRC = \
 			client/readconf.c \
 			client/client_con.c \
-			client/main.c \
-			client/menu.c
+			client/menu.c \
+			client/main.c
 			
 
 SERVER_OBJ = $(SERVER_SRC:.c=.o)

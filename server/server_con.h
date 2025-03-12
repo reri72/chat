@@ -1,8 +1,8 @@
-#ifdef _SERVER_CON_H_
+#ifndef _SERVER_CON_H_
 #define _SERVER_CON_H_
 
 int chat_server_init();
-void chat_server_end();
+int chat_server_end();
 
 // -----------------------------------------------------------------------------
 

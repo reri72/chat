@@ -1,10 +1,17 @@
 #ifndef _PROTOCOL_H_
 #define _PROTOCOL_H_
 
-#define DEFAULT_SERVER_PORT 7898
+#include "stdlib.h"
 
-#define CERT_FILE   "cert.crt"
-#define KEY_FILE    "cert.key"
+#define FREE(a) \
+        if(a != NULL) free(a); \
+        a = NULL;
+
+#define DEFAULT_SERVER_PORT 7878
+
+#define IP_LEN 16
+#define CERT_PATH_LEN 2048
+#define KEY_PATH_LEN 2048
 
 #define PROTO_CREATE_USER   100
 

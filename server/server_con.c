@@ -16,55 +16,53 @@ SSL     *ssl = NULL;
 
 extern int server_sock;
 
-extern char serverip[16];
+extern char serverip[IP_LEN];
 extern unsigned short serverport;
+extern char certpath[CERT_PATH_LEN];
+extern char keypath[KEY_PATH_LEN];
 
 int chat_server_init()
 {
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-
     init_ssl();
 
     ctx = create_ctx(1);
     if (ctx == NULL)
     {
         perror("create_ctx");
-        goto CLEAN_UP;
+        return chat_server_end();
     }
 
-    if (configure_ctx(ctx, CERT_FILE, KEY_FILE) < 0)
+    if (configure_ctx(ctx, certpath, keypath) < 0)
     {
         perror("configure_ctx");
-        goto CLEAN_UP;
+        return chat_server_end();
     }
 
     server_sock = create_sock(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0)
     {
         perror("create_sock");
-        goto CLEAN_UP;
+        return chat_server_end();
     }
-    
-    printf("[%s] sock create success \n", __FUNCTION__);
 
     return 0;
-
-CLEAN_UP :
-    cleanup_ssl(&ssl, &ctx);
-
-    if (server_sock >= 0)
-        close_sock(&server_sock);
-
-    exit(1);
 }
 
-void chat_server_end()
+int chat_server_end()
 {
+    if (ssl)
+    {
+        if (SSL_shutdown(ssl) < 0)
+        {
+            perror("SSL shutdown failed");
+        }
+    }
     cleanup_ssl(&ssl, &ctx);
 
     if (server_sock >= 0)
         close_sock(&server_sock);
+
+    return -1;
 }
 
 // -----------------------------------------------------------------------------
@@ -73,9 +71,7 @@ void *thread_accept_client()
 {
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
-
-    // do somethings...
-
+    
     return NULL;
 }
 
