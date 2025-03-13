@@ -70,14 +70,27 @@ int chat_client_end()
 {
     if (ssl)
     {
-        if (SSL_shutdown(ssl) < 0)
+        int ret = SSL_shutdown(ssl);
+        if (ret == 0)
+            ret = SSL_shutdown(ssl);
+
+        if (ret < 0)
         {
-            perror("SSL shutdown failed");
+            int err = SSL_get_error(ssl, ret);
+            
+            if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+                fprintf(stderr, "SSL shutdown needs retry\n");
+            else if (err == SSL_ERROR_SYSCALL)
+                fprintf(stderr, "SSL shutdown syscall error: socket closed early\n");
+            else if (err == SSL_ERROR_SSL)
+                fprintf(stderr, "SSL shutdown protocol error\n");
+            else
+                fprintf(stderr, "SSL shutdown failed with error %d\n", err);
         }
     }
     cleanup_ssl(&ssl, &ctx);
 
-    if (client_sock)
+    if (client_sock >= 0)
         close_sock(&client_sock);
 
     return -1;
