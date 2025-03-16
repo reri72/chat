@@ -63,6 +63,8 @@ int chat_client_init()
         return chat_client_end();
     }
 
+    sock_set_no_delay(client_sock);
+
     if (sock_set_nonblocking(client_sock) != SUCCESS)
     {
         fprintf(stderr, "sock_set_nonblocking() failed \n");

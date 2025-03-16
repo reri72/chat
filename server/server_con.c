@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "socks.h"
@@ -38,6 +39,9 @@ int chat_server_init()
         fprintf(stderr, "create_sock() failed \n");
         return chat_server_end();
     }
+    
+    sock_set_reuse(server_sock);
+    sock_set_no_delay(server_sock);
 
     if (sock_set_nonblocking(server_sock) != SUCCESS)
     {
@@ -83,8 +87,56 @@ int chat_server_end()
 void *thread_accept_client()
 {
     struct sockaddr_in addr;
+    fd_set readfds;
+
     socklen_t addr_len = sizeof(addr);
-    
+
+    int ret = tcp_server_process(server_sock, serverport, serverip);
+    if (ret != SUCCESS)
+    {
+        fprintf(stderr, "tcp_server_process() failed \n");
+        return NULL;
+    }
+
+    while (server_sock > -1)
+    {
+        int client_sock = -1;
+        struct timeval tm;
+
+        FD_ZERO(&readfds);
+        FD_SET(server_sock, &readfds);
+
+        tm.tv_sec = 1;
+        tm.tv_usec = 0;
+
+        int ret = select(server_sock + 1, &readfds, NULL, NULL, &tm);
+        if (ret < 0)
+        {
+            perror("select failed");
+            break;
+        }
+        else if (ret == 0)
+        {
+           continue;
+        }
+
+        if (FD_ISSET(server_sock, &readfds))
+        {
+            client_sock = accept(server_sock, (struct sockaddr *)&addr, &addr_len);
+            if (client_sock < 0)
+            {
+                perror("accept failed");
+                continue;
+            }
+
+            printf("new connection from %s:%d \n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+
+            // do somethings
+        }
+    }
+
+    close_sock(&server_sock);
+
     return NULL;
 }
 
