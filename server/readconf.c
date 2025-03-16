@@ -22,7 +22,7 @@ void fill_server_conf_value()
 
     if (validate_config_file(confpath) == 0)
     {
-        perror("Not exist server.conf");
+        fprintf(stderr, "Not exist server.conf\n");
         exit(1);
     }
 
@@ -46,7 +46,7 @@ void fill_server_conf_value()
 
     if (key_path == NULL || cert_path == NULL)
     {
-        perror("Not exist cert or key file");
+        fprintf(stderr, "Not exist cert or key file\n");
         exit(1);
     }
     

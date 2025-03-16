@@ -8,7 +8,7 @@
 
 #include "common.h"
 
-#include "sslUtils.h"
+#include "sockC.h"
 #include "client_con.h"
 
 SSL_CTX *ctx = NULL;
@@ -27,39 +27,45 @@ int chat_client_init()
     ctx = create_ctx(0);
     if (ctx == NULL)
     {
-        perror("create_ctx");
+        fprintf(stderr, "create_ctx failed \n");
         exit(1);
     }
 
     ssl = SSL_new(ctx);
     if (ssl == NULL)
     {
-        perror("SSL_new");
+        fprintf(stderr, "SSL_new() failed \n");
         return chat_client_end();
     }
 
     client_sock = create_sock(AF_INET, SOCK_STREAM, 0);
     if (client_sock < 0)
     {
-        perror("create_sock");
+        fprintf(stderr, "create_sock() failed \n");
         return chat_client_end();
     }
 
     if ( tcp_client_process(client_sock, serverport, serverip) != 0 )
     {
-        perror("tcp_client_process");
+        fprintf(stderr, "tcp_client_process() failed \n");
         return chat_client_end();
     }
 
     if (SSL_set_fd(ssl, client_sock) == 0)
     {
-        fprintf(stderr, "SSL_set_fd failed\n");
+        fprintf(stderr, "SSL_set_fd() failed \n");
         return chat_client_end();
     }
 
     if (SSL_connect(ssl) <= 0)
     {
         ERR_print_errors_fp(stderr);
+        return chat_client_end();
+    }
+
+    if (sock_set_nonblocking(client_sock) != SUCCESS)
+    {
+        fprintf(stderr, "sock_set_nonblocking() failed \n");
         return chat_client_end();
     }
 

@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
     if ( chat_client_init() != 0 )
     {
-        perror("chat_client_init");
+        fprintf(stderr, "chat_client_init() \n");
         exit(1);
     }
     
@@ -59,6 +59,7 @@ int main(int argc, char **argv)
             }
         }
     }
+
 ENTRY:
 
     chat_client_end();
