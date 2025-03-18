@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
+#include <pthread.h>
 
 #include "socks.h"
 
@@ -14,6 +16,8 @@
 
 SSL_CTX *ctx = NULL;
 SSL     *ssl = NULL;
+
+extern volatile sig_atomic_t exit_flag;
 
 extern int server_sock;
 
@@ -84,7 +88,7 @@ int chat_server_end()
 
 // -----------------------------------------------------------------------------
 
-void *thread_accept_client()
+void *thread_accept_client(void* arg)
 {
     struct sockaddr_in addr;
     fd_set readfds;
@@ -98,9 +102,10 @@ void *thread_accept_client()
         return NULL;
     }
 
-    while (server_sock > -1)
+    while (exit_flag == 0)
     {
         int client_sock = -1;
+        pthread_t thread;
         struct timeval tm;
 
         FD_ZERO(&readfds);
@@ -117,7 +122,7 @@ void *thread_accept_client()
         }
         else if (ret == 0)
         {
-           continue;
+            continue;
         }
 
         if (FD_ISSET(server_sock, &readfds))
@@ -129,13 +134,57 @@ void *thread_accept_client()
                 continue;
             }
 
-            printf("new connection from %s:%d \n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+            client_t *client = (client_t *)calloc(1, sizeof(client_t));
+            if (client == NULL)
+            {
+                fprintf(stderr, "calloc failed \n");
+                close_sock(&client_sock);
+            }
 
-            // do somethings
+            strcpy(client->ip, inet_ntoa(addr.sin_addr));
+            client->ipaddr = ntohl(addr.sin_addr.s_addr);
+            client->sockfd = client_sock;
+            client->port = ntohs(addr.sin_port);
+
+#if 0
+            printf("new connection(%d) from %s(%u):%u \n", 
+                        client->sockfd, client->ip, client->ipaddr, client->port);
+#endif
+
+            if (pthread_create(&thread, NULL, thread_client_communication, (void*)client) == 0)
+            {
+                if (pthread_detach(thread) != 0)
+                {
+                    perror("pthread_detach");
+                    close_sock(&client_sock);
+                    FREE(client);
+                }
+            }
+            else
+            {
+                perror("pthread_create");
+                close_sock(&client_sock);
+                FREE(client);
+            }
         }
     }
 
     close_sock(&server_sock);
+
+    return NULL;
+}
+
+void *thread_client_communication(void* arg)
+{
+    client_t* client = (client_t*)arg;
+
+    while (exit_flag == 0 && client->sockfd > -1)
+    {
+        
+    }
+
+    close_sock(&client->sockfd);
+    FREE(client);
 
     return NULL;
 }

@@ -10,6 +10,8 @@ extern void fill_server_conf_value();
 extern int chat_server_init();
 extern int chat_server_end();
 
+volatile sig_atomic_t exit_flag = 0;
+
 void sighandle(int signum, siginfo_t *info, void *context);
 
 int main(int argc, char **argv)
@@ -31,6 +33,22 @@ int main(int argc, char **argv)
         perror("chat_server_init");
         exit(1);
     }
+    
+    pthread_t threads[THREAD_POOL_SIZE] = {0,};
+    void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, };
+    
+    int i;
+    for (i = 0; i < THREAD_COUNT; i++)
+    {
+        if (pthread_create(&threads[i], NULL, functions[i], NULL) != 0)
+            perror("Failed to create thread");
+    }
+
+    for (i = 0; i < THREAD_COUNT; i++)
+    {
+        if (pthread_join(threads[i], NULL) != 0)
+            perror("Failed to join thread");
+    }
 
     chat_server_end();
 
@@ -49,5 +67,5 @@ void sighandle(int signum, siginfo_t *info, void *context)
     
     chat_server_end();
 
-    exit(0);
+    exit_flag = 1;
 }

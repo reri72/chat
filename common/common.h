@@ -24,5 +24,12 @@ typedef struct proto_hdr
     char flag;
 } proto_hdr_t;
 
+typedef struct client
+{
+    char ip[16];
+    unsigned int ipaddr;
+    int sockfd;
+    unsigned short port;
+} client_t;
 
 #endif
