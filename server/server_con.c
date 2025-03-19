@@ -17,6 +17,9 @@
 SSL_CTX *ctx = NULL;
 SSL     *ssl = NULL;
 
+int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
+int send_data(SSL *ssl, const unsigned char *data, size_t len);
+
 extern volatile sig_atomic_t exit_flag;
 
 extern int server_sock;
@@ -86,6 +89,60 @@ int chat_server_end()
     return -1;
 }
 
+int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
+{
+    int bytes = 0;
+    memset(buffer, 0, bufsize);
+
+    while ((bytes = SSL_read(ssl, buffer, bufsize - 1)) <= 0)
+    {
+        int err = SSL_get_error(ssl, bytes);
+        if (err == SSL_ERROR_WANT_READ)
+        {
+            nano_sleep(1,0);
+            continue;
+        }
+
+        // 정상 종료
+        if (err == SSL_ERROR_ZERO_RETURN)
+        {
+            printf("Client disconnected cleanly\n");
+            return 0;
+        }
+
+        fprintf(stderr, "SSL_read failed (%s)\n", ERR_reason_error_string(err));
+        return -1;
+    }
+
+    buffer[bytes] = '\0';
+    return bytes;
+}
+
+int send_data(SSL *ssl, const unsigned char *data, size_t len)
+{
+    int sent = 0;
+
+    while (sent < len)
+    {
+        int ret = SSL_write(ssl, data + sent, len - sent);
+        if (ret <= 0)
+        {
+            int err = SSL_get_error(ssl, ret);
+            if (err == SSL_ERROR_WANT_WRITE)
+            {
+                nano_sleep(1,0);
+                continue;
+            }
+
+            fprintf(stderr, "SSL_write failed: %s\n", ERR_reason_error_string(err));
+            return -1;
+        }
+        sent += ret;
+    }
+    return sent;
+}
+
+
 // -----------------------------------------------------------------------------
 
 void *thread_accept_client(void* arg)
@@ -105,6 +162,7 @@ void *thread_accept_client(void* arg)
     while (exit_flag == 0)
     {
         int client_sock = -1;
+        SSL *ssl = NULL;
         pthread_t thread;
         struct timeval tm;
 
@@ -133,6 +191,33 @@ void *thread_accept_client(void* arg)
                 perror("accept failed");
                 continue;
             }
+            
+            ssl = SSL_new(ctx);
+            if (ssl == NULL)
+            {
+                close_sock(&client_sock);
+                fprintf(stderr, "SSL_new failed \n");
+                continue;
+            }
+
+            if (SSL_set_fd(ssl, client_sock) == 0)
+            {
+                fprintf(stderr, "SSL_set_fd failed \n");
+                SSL_free(ssl); ssl = NULL;
+                close_sock(&client_sock);
+                continue;
+            }
+
+            if (SSL_accept(ssl) <= 0)
+            {
+                int ssl_err = SSL_get_error(ssl, -1);
+                check_ssl_err(ssl_err);
+                ERR_print_errors_fp(stderr);
+
+                SSL_free(ssl); ssl = NULL;
+                close_sock(&client_sock);
+                continue;
+            }
 
             client_t *client = (client_t *)calloc(1, sizeof(client_t));
             if (client == NULL)
@@ -145,8 +230,9 @@ void *thread_accept_client(void* arg)
             client->ipaddr = ntohl(addr.sin_addr.s_addr);
             client->sockfd = client_sock;
             client->port = ntohs(addr.sin_port);
-
-#if 0
+            client->ssl = ssl;
+            
+#if 1
             printf("new connection(%d) from %s(%u):%u \n", 
                         client->sockfd, client->ip, client->ipaddr, client->port);
 #endif
@@ -176,14 +262,33 @@ void *thread_accept_client(void* arg)
 
 void *thread_client_communication(void* arg)
 {
-    client_t* client = (client_t*)arg;
+    client_t *client = (client_t *)arg;
+    SSL *ssl = client->ssl;
+    unsigned char buffer[BUFFER_SIZE] = {0,};
 
-    while (exit_flag == 0 && client->sockfd > -1)
+    while (exit_flag == 0)
     {
-        
+        int bytes = receive_data(ssl, buffer, sizeof(buffer));
+        if (bytes <= 0)
+            break;
+
+        PACKETDUMP(buffer, bytes);
+
+#if 0
+        // 패킷 분석하고 응답 데이터 만들어서 전송
+        if (ssl_server_send(ssl, buffer, bytes) < 0)
+            break;
+#endif
     }
 
+cleanup :
     close_sock(&client->sockfd);
+    if (client->ssl)
+    {
+        SSL_free(ssl);
+        ssl = NULL;
+    }
+    
     FREE(client);
 
     return NULL;

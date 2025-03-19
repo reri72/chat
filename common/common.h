@@ -30,6 +30,7 @@ typedef struct client
     unsigned int ipaddr;
     int sockfd;
     unsigned short port;
+    void *ssl;
 } client_t;
 
 #endif
