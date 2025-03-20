@@ -14,7 +14,7 @@
 SSL_CTX *ctx = NULL;
 SSL     *ssl = NULL;
 
-int send_data(SSL *ssl, const unsigned char *buffer, size_t len);
+int send_data(SSL *ssl, const char *buffer, size_t len);
 int recv_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
 
 int client_sock = -1;
@@ -31,7 +31,7 @@ int chat_client_init()
     if (ctx == NULL)
     {
         fprintf(stderr, "create_ctx failed \n");
-        exit(1);
+        return -1;
     }
 
     ssl = SSL_new(ctx);
@@ -67,13 +67,7 @@ int chat_client_init()
     }
 
     sock_set_no_delay(client_sock);
-
-    if (sock_set_nonblocking(client_sock) != SUCCESS)
-    {
-        fprintf(stderr, "sock_set_nonblocking() failed \n");
-        return chat_client_end();
-    }
-
+    
     return 0;
 }
 
@@ -107,7 +101,7 @@ int chat_client_end()
     return -1;
 }
 
-int send_data(SSL *ssl, const unsigned char *buffer, size_t len)
+int send_data(SSL *ssl, const char *buffer, size_t len)
 {
     int sent = 0;
     while (sent < len)

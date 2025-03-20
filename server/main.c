@@ -65,7 +65,7 @@ void sighandle(int signum, siginfo_t *info, void *context)
         fprintf(stderr, "signal code: %d\n", info->si_code);
     }
     
-    chat_server_end();
+    // cleanup client pool
 
     exit_flag = 1;
 }

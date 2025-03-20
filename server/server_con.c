@@ -15,10 +15,10 @@
 #include "server_con.h"
 
 SSL_CTX *ctx = NULL;
-SSL     *ssl = NULL;
 
 int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
-int send_data(SSL *ssl, const unsigned char *data, size_t len);
+int send_data(SSL *ssl, const char *data, size_t len);
+void close_client_peer(client_t *client);
 
 extern volatile sig_atomic_t exit_flag;
 
@@ -46,21 +46,27 @@ int chat_server_init()
         fprintf(stderr, "create_sock() failed \n");
         return chat_server_end();
     }
-    
+
     sock_set_reuse(server_sock);
     sock_set_no_delay(server_sock);
 
-    if (sock_set_nonblocking(server_sock) != SUCCESS)
-    {
-        fprintf(stderr, "sock_set_nonblocking() failed\n");
-        return chat_server_end();
-    }
-    
     return 0;
 }
 
 int chat_server_end()
 {
+    if (server_sock >= 0)
+        close_sock(&server_sock);
+
+    if (ctx != NULL)
+        SSL_CTX_free(ctx);
+    
+    return -1;
+}
+
+void close_client_peer(client_t *client)
+{
+    SSL *ssl = client->ssl;
     if (ssl)
     {
         int ret = SSL_shutdown(ssl);
@@ -80,13 +86,12 @@ int chat_server_end()
             else
                 fprintf(stderr, "SSL_shutdown failed with error %d \n", err);
         }
+        SSL_free(ssl);
     }
-    cleanup_ssl(&ssl, &ctx);
 
-    if (server_sock >= 0)
-        close_sock(&server_sock);
-
-    return -1;
+    close_sock(&client->sockfd);
+    
+    FREE(client);
 }
 
 int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
@@ -103,7 +108,6 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
             continue;
         }
 
-        // 정상 종료
         if (err == SSL_ERROR_ZERO_RETURN)
         {
             printf("Client disconnected cleanly\n");
@@ -118,7 +122,7 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
     return bytes;
 }
 
-int send_data(SSL *ssl, const unsigned char *data, size_t len)
+int send_data(SSL *ssl, const char *data, size_t len)
 {
     int sent = 0;
 
@@ -141,7 +145,6 @@ int send_data(SSL *ssl, const unsigned char *data, size_t len)
     }
     return sent;
 }
-
 
 // -----------------------------------------------------------------------------
 
@@ -232,30 +235,24 @@ void *thread_accept_client(void* arg)
             client->port = ntohs(addr.sin_port);
             client->ssl = ssl;
             
-#if 1
             printf("new connection(%d) from %s(%u):%u \n", 
                         client->sockfd, client->ip, client->ipaddr, client->port);
-#endif
 
             if (pthread_create(&thread, NULL, thread_client_communication, (void*)client) == 0)
             {
                 if (pthread_detach(thread) != 0)
                 {
                     perror("pthread_detach");
-                    close_sock(&client_sock);
-                    FREE(client);
+                    close_client_peer(client);
                 }
             }
             else
             {
                 perror("pthread_create");
-                close_sock(&client_sock);
-                FREE(client);
+                close_client_peer(client);
             }
         }
     }
-
-    close_sock(&server_sock);
 
     return NULL;
 }
@@ -271,25 +268,11 @@ void *thread_client_communication(void* arg)
         int bytes = receive_data(ssl, buffer, sizeof(buffer));
         if (bytes <= 0)
             break;
-
-        PACKETDUMP(buffer, bytes);
-
-#if 0
-        // 패킷 분석하고 응답 데이터 만들어서 전송
-        if (ssl_server_send(ssl, buffer, bytes) < 0)
-            break;
-#endif
-    }
-
-cleanup :
-    close_sock(&client->sockfd);
-    if (client->ssl)
-    {
-        SSL_free(ssl);
-        ssl = NULL;
+            
+        // do somethings ..
     }
     
-    FREE(client);
+    close_client_peer(client);
 
     return NULL;
 }
