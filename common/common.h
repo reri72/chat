@@ -2,10 +2,19 @@
 #define _PROTOCOL_H_
 
 #include "stdlib.h"
+#include "string.h"
 
 #define FREE(a) \
         if(a != NULL) free(a); \
         a = NULL;
+
+#define WRITE_BUFF(pp, data, size) \
+        memcpy(pp, data, size); \
+        pp += size;
+
+#define READ_BUFF(buff, pp, size) \
+        memcpy(buff, pp, size); \
+        pp += size;
 
 #define DEFAULT_SERVER_PORT 7878
 
@@ -32,5 +41,7 @@ typedef struct client
     unsigned short port;
     void *ssl;
 } client_t;
+
+void read_header(proto_hdr_t *hdr, unsigned char *buffer);
 
 #endif
