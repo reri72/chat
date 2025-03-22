@@ -5,6 +5,8 @@
 #include <termios.h>
 #include <fcntl.h>
 
+#include "common.h"
+#include "client_con.h"
 #include "menu.h"
 #include "utiles.h"
 
@@ -131,6 +133,8 @@ void join()
 {
     char id[50] = {0,};
     char password[50] = {0,};
+    unsigned char *buffer = NULL;
+    int len = 0;
 
     system("/usr/bin/clear");
 
@@ -138,4 +142,19 @@ void join()
     get_id("NEW ID : ", id, sizeof(id), MAX_ID_LENGTH);
     get_password("PASSWORD : ", password, sizeof(password));
     puts("============================");
+
+    buffer = join_con_req(id, password, &len);
+    if (buffer == NULL)
+    {
+        puts("user create failed");
+    }
+    else
+    {
+        if (send_data(buffer, len) != -1)
+            puts("user create success");
+        else
+            puts("user create failed");
+    }
+
+    FREE(buffer);
 }

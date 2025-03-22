@@ -14,9 +14,6 @@
 SSL_CTX *ctx = NULL;
 SSL     *ssl = NULL;
 
-int send_data(SSL *ssl, const char *buffer, size_t len);
-int recv_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
-
 int client_sock = -1;
 
 extern char clientip[IP_LEN];
@@ -101,7 +98,7 @@ int chat_client_end()
     return -1;
 }
 
-int send_data(SSL *ssl, const char *buffer, size_t len)
+int send_data(const unsigned char *buffer, int len)
 {
     int sent = 0;
     while (sent < len)
@@ -124,7 +121,7 @@ int send_data(SSL *ssl, const char *buffer, size_t len)
     return sent;
 }
 
-int recv_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
+int recv_data(unsigned char *buffer, int bufsize)
 {
     fd_set read_fds;
     struct timeval timeout;
@@ -166,13 +163,13 @@ int recv_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
     return bytes;
 }
 
-int join_con_req(const char *id, const char *passwd)
+unsigned char *join_con_req(const char *id, const char *passwd, int *buflen)
 {
-    int ret = 0;
-    char *buffer = NULL;
+    unsigned char *buffer = NULL;
     size_t totlen = 0;
     uint8_t len = 0;
     proto_hdr_t hdr;
+    unsigned char *p = NULL;
 
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
@@ -182,19 +179,23 @@ int join_con_req(const char *id, const char *passwd)
     totlen = sizeof(proto_hdr_t) 
                 + sizeof(uint8_t) + strlen(id) + 
                 + sizeof(uint8_t) + strlen(passwd);
-    buffer = (char *)calloc(1, totlen);
 
-    memcpy(buffer, &hdr, sizeof(proto_hdr_t));
+    buffer = (unsigned char *)calloc(1, totlen);
+    if (buffer == NULL)
+        return NULL;
+
+    p = buffer;
+    *buflen = totlen;
+
+    WRITE_BUFF(p, &hdr, sizeof(proto_hdr_t));
 
     len = strlen(id);
-    memcpy(buffer, &len, sizeof(uint8_t));
-    memcpy(buffer, id, len);
+    WRITE_BUFF(p, &len, sizeof(uint8_t));
+    WRITE_BUFF(p, id, len);
 
     len = strlen(passwd);
-    memcpy(buffer, &len, sizeof(uint8_t));
-    memcpy(buffer, passwd, len);
+    WRITE_BUFF(p, &len, sizeof(uint8_t));
+    WRITE_BUFF(p, passwd, len);
 
-    // do somethings ..
-
-    return ret;
+    return buffer;
 }
