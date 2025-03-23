@@ -17,8 +17,12 @@
 SSL_CTX *ctx = NULL;
 
 int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
-int send_data(SSL *ssl, const char *data, size_t len);
+int send_data(SSL *ssl, const unsigned char *data, size_t len);
+
 void close_client_peer(client_t *client);
+
+int join_con_res(SSL *ssl, unsigned char *packet);
+void join_read_data(unsigned char *packets, uint8_t *qres);
 
 extern volatile sig_atomic_t exit_flag;
 
@@ -122,7 +126,7 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
     return bytes;
 }
 
-int send_data(SSL *ssl, const char *data, size_t len)
+int send_data(SSL *ssl, const unsigned char *data, size_t len)
 {
     int sent = 0;
 
@@ -261,47 +265,96 @@ void *thread_client_communication(void* arg)
 {
     client_t *client = (client_t *)arg;
     SSL *ssl = client->ssl;
-    unsigned char buffer[BUFFER_SIZE] = {0,};
+    unsigned char packet[BUFFER_SIZE] = {0,};
 
     while (exit_flag == 0)
     {
-        int bytes = receive_data(ssl, buffer, sizeof(buffer));
+        proto_hdr_t hdr = {0,0};
+        
+        int bytes = receive_data(ssl, packet, sizeof(packet));
         if (bytes <= 0)
             break;
-            
+        
+        memcpy(&hdr, packet, sizeof(hdr));
+        uint16_t ptoro = ntohs(hdr.proto);
+
+        switch (ptoro)
+        {
+            case PROTO_CREATE_USER:
+                {
+                    join_con_res(ssl, packet);
+                } break;
+
+            default:
+                break;
+        }
+
+        break;
         // do somethings ..
     }
     
+    printf("exit client : %s \n ", client->ip);
     close_client_peer(client);
-
+    
     return NULL;
 }
 
 // -----------------------------------------------------------------------------
 
-int join_con_res()
+int join_con_res(SSL *ssl, unsigned char *packet)
 {
     int ret = 0;
-    char *buffer = NULL;
+    unsigned char *buffer = NULL, *pp = NULL;
+
     size_t totlen = 0;
-    uint8_t qres = 0;
+    uint8_t qres = FAILED;
     proto_hdr_t hdr;
 
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
     totlen = sizeof(proto_hdr_t) + sizeof(uint8_t);
-    buffer = (char *)calloc(1, totlen);
+    buffer = (unsigned char *)malloc(totlen);
+    if (buffer == NULL)
+        return -1;
+
+    pp = buffer;
 
     hdr.proto   = htons(PROTO_CREATE_USER);
     hdr.flag    = PROTO_RES;
 
-    memcpy(buffer, &hdr, sizeof(proto_hdr_t));
+    WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
 
-    // qres = ....
+    join_read_data(packet, &qres);
 
-    memcpy(buffer, &qres, sizeof(qres));
+    WRITE_BUFF(pp, &qres, sizeof(qres));
 
-    // do somethings ..
+    // ret = send_data(ssl, pp, totlen);
+
+    FREE(buffer);
 
     return ret;
+}
+
+void join_read_data(unsigned char *packet, uint8_t *qres)
+{
+    unsigned char *pp = packet;
+
+    unsigned char id[256] = {0,};
+    unsigned char passwd[256] = {0,};
+    uint8_t len = 0;
+
+    pp += sizeof(proto_hdr_t);
+
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(id, pp, len);
+    
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(passwd, pp, len);
+
+    // db process
+    
+    if (1)
+        *qres = SUCCESS;
+    else
+        *qres = SUCCESS;
 }

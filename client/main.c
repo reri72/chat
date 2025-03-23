@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <signal.h>
 
 #include "client_con.h"
 #include "menu.h"
 
 #include "socks.h"
 #include "sslUtils.h"
+
+volatile sig_atomic_t exit_flag = 0;
 
 extern void fill_client_conf_value();
 
@@ -32,7 +35,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    while (1)
+    while (exit_flag == 0)
     {
         int ret = home();
         
@@ -76,8 +79,6 @@ void sighandle(int signum, siginfo_t *info, void *context)
         fprintf(stderr, "signal sent by pid: %d\n", info->si_pid);
         fprintf(stderr, "signal code: %d\n", info->si_code);
     }
-    
-    chat_client_end();
 
-    exit(0);
+    exit_flag = 1;
 }

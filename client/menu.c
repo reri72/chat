@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <termios.h>
 #include <fcntl.h>
 
@@ -9,6 +10,8 @@
 #include "client_con.h"
 #include "menu.h"
 #include "utiles.h"
+
+extern volatile sig_atomic_t exit_flag;
 
 void echo_off_terminal()
 {
@@ -31,7 +34,7 @@ void echo_on_terminal()
 void get_id(char *prompt, char *input_buffer, int buffer_size, int max_length)
 {
     int len = 0;
-    while (1)
+    while (exit_flag == 0)
     {
         printf("%s", prompt);
         fgets(input_buffer, buffer_size, stdin);
@@ -100,7 +103,7 @@ int home()
 
     system("/usr/bin/clear");
     
-    while (1)
+    while (exit_flag == 0)
     {
         puts("======== HELLO CHAT ========");
         printf("1. %s \n", home_choice[1]);
@@ -151,9 +154,14 @@ void join()
     else
     {
         if (send_data(buffer, len) != -1)
-            puts("user create success");
+        {
+            // do somethings..
+                puts("user create success");
+        }
         else
+        {
             puts("user create failed");
+        }
     }
 
     FREE(buffer);

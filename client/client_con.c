@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <netinet/in.h>
 
 #include "socks.h"
@@ -19,6 +20,8 @@ int client_sock = -1;
 extern char clientip[IP_LEN];
 extern char serverip[IP_LEN];
 extern unsigned short serverport;
+
+extern volatile sig_atomic_t exit_flag;
 
 int chat_client_init()
 {

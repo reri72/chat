@@ -13,6 +13,4 @@ void *thread_client_communication(void* arg);
 
 // -----------------------------------------------------------------------------
 
-int join_con_res();
-
 #endif
