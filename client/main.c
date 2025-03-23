@@ -81,4 +81,10 @@ void sighandle(int signum, siginfo_t *info, void *context)
     }
 
     exit_flag = 1;
+
+    nano_sleep(1,0);
+
+    chat_client_end();
+
+    exit(0);
 }

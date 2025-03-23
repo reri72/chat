@@ -103,7 +103,7 @@ int home()
 
     system("/usr/bin/clear");
     
-    while (exit_flag == 0)
+    while (1)
     {
         puts("======== HELLO CHAT ========");
         printf("1. %s \n", home_choice[1]);
