@@ -5,10 +5,14 @@
 
 #include "server_con.h"
 #include "sslUtils.h"
+#include "myutils.h"
 
 extern void fill_server_conf_value();
+extern void server_db_configure();
 extern int chat_server_init();
 extern int chat_server_end();
+
+extern MYSQL *conn;
 
 volatile sig_atomic_t exit_flag = 0;
 
@@ -27,6 +31,7 @@ int main(int argc, char **argv)
     sigaction(SIGTERM, &sa, NULL);
 
     fill_server_conf_value();
+    server_db_configure();
 
     if ( chat_server_init() != 0 )
     {
@@ -51,6 +56,9 @@ int main(int argc, char **argv)
     }
 
     chat_server_end();
+    
+    mysql_close(conn);
+    mysql_library_end();
 
     return 0;
 }

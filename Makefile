@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -g -O2 -I./libs/reriutils -I./common 
-LDFLAGS = -L./libs/reriutils
-LDLIBS = -lreriutils -lpthread -lssl -lcrypto
+CFLAGS = -Wall -g -O2 -I./libs/reriutils -I./common  
+LDFLAGS = -L./libs/reriutils -L/usr/lib64/mysql
+LDLIBS = -lreriutils -lmysqlclient -lpthread -lssl -lcrypto 
 
 SERVER_SRC = \
 			common/common.c \

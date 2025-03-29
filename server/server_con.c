@@ -114,7 +114,7 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
 
         if (err == SSL_ERROR_ZERO_RETURN)
         {
-            printf("Client disconnected cleanly\n");
+            fprintf(stdout, "Client disconnected cleanly\n");
             return 0;
         }
 
