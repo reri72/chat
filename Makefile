@@ -4,12 +4,14 @@ LDFLAGS = -L./libs/reriutils
 LDLIBS = -lreriutils -lpthread -lssl -lcrypto
 
 SERVER_SRC = \
+			common/common.c \
 			server/server_con.c \
-			server/readconf.c \
+			server/server_config.c \
 			server/main.c
 			
 CLIENT_SRC = \
-			client/readconf.c \
+			common/common.c \
+			client/client_config.c \
 			client/client_con.c \
 			client/menu.c \
 			client/main.c
