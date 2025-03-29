@@ -88,4 +88,32 @@ void server_db_configure()
 	my_init_mysql(&conn);
 	my_set_con_option(conn);
     my_con_mysql(conn, serverip, db_id, db_passwd, NULL, 0, flags);
+
+    const char *db_query = "CREATE DATABASE IF NOT EXISTS CHAT";
+    if (mysql_query(conn, db_query))
+    {
+        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        exit(1);
+    }
+
+    const char *db_use_query = "USE CHAT";
+    if (mysql_query(conn, db_use_query))
+    {
+        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        exit(1);
+    }
+
+    const char *db_client_query =  "CREATE TABLE IF NOT EXISTS CLIENT_INFO ("
+                                     "ID INT AUTO_INCREMENT PRIMARY KEY, "
+                                     "USERNAME VARCHAR(20) NOT NULL, "
+                                     "PASSWORD VARCHAR(50) NOT NULL, "
+                                     "LAST_LOGIN_TIME TIMESTAMP NULL DEFAULT NULL)";
+    if (mysql_query(conn, db_client_query))
+    {
+        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        exit(1);
+    }
 }
