@@ -13,16 +13,17 @@
 
 #include "sockC.h"
 #include "server_con.h"
+#include "server_sql.h"
 
 SSL_CTX *ctx = NULL;
 
 int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
-int send_data(SSL *ssl, const unsigned char *data, size_t len);
+int send_data(SSL *ssl, unsigned char *data, size_t len);
 
 void close_client_peer(client_t *client);
 
 int join_con_res(SSL *ssl, unsigned char *packet);
-void join_read_data(unsigned char *packets, uint8_t *qres);
+void join_read_data(unsigned char *packets, int8_t *qres);
 
 extern volatile sig_atomic_t exit_flag;
 
@@ -126,7 +127,7 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
     return bytes;
 }
 
-int send_data(SSL *ssl, const unsigned char *data, size_t len)
+int send_data(SSL *ssl, unsigned char *data, size_t len)
 {
     int sent = 0;
 
@@ -282,7 +283,8 @@ void *thread_client_communication(void* arg)
         {
             case PROTO_CREATE_USER:
                 {
-                    join_con_res(ssl, packet);
+                    if (join_con_res(ssl, packet))
+                        fprintf(stdout, "user create success\n");
                 } break;
 
             default:
@@ -307,12 +309,12 @@ int join_con_res(SSL *ssl, unsigned char *packet)
     unsigned char *buffer = NULL, *pp = NULL;
 
     size_t totlen = 0;
-    uint8_t qres = FAILED;
+    int8_t qres = FAILED;
     proto_hdr_t hdr;
 
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
-    totlen = sizeof(proto_hdr_t) + sizeof(uint8_t);
+    totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
     buffer = (unsigned char *)malloc(totlen);
     if (buffer == NULL)
         return -1;
@@ -328,19 +330,19 @@ int join_con_res(SSL *ssl, unsigned char *packet)
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
 
-    // ret = send_data(ssl, pp, totlen);
+    ret = send_data(ssl, buffer, totlen);
 
     FREE(buffer);
 
     return ret;
 }
 
-void join_read_data(unsigned char *packet, uint8_t *qres)
+void join_read_data(unsigned char *packet, int8_t *qres)
 {
     unsigned char *pp = packet;
 
-    unsigned char id[256] = {0,};
-    unsigned char passwd[256] = {0,};
+    char id[MAX_ID_LENGTH] = {0,};
+    char passwd[MAX_PASSWORD_LENGTH] = {0,};
     uint8_t len = 0;
 
     pp += sizeof(proto_hdr_t);
@@ -351,10 +353,5 @@ void join_read_data(unsigned char *packet, uint8_t *qres)
     READ_BUFF(&len, pp, sizeof(uint8_t));
     READ_BUFF(passwd, pp, len);
 
-    // db process
-    
-    if (1)
-        *qres = SUCCESS;
-    else
-        *qres = SUCCESS;
+    *qres = join_user(id, passwd);
 }

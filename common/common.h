@@ -22,6 +22,9 @@
 #define CERT_PATH_LEN 2048
 #define KEY_PATH_LEN 2048
 
+#define MAX_ID_LENGTH 20
+#define MAX_PASSWORD_LENGTH 50
+
 #define PROTO_CREATE_USER   100
 
 #define PROTO_REQ   0

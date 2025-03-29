@@ -93,15 +93,16 @@ int chat_client_end()
                 fprintf(stderr, "SSL shutdown failed with error %d\n", err);
         }
     }
-    cleanup_ssl(&ssl, &ctx);
 
     if (client_sock >= 0)
         close_sock(&client_sock);
 
+    cleanup_ssl(&ssl, &ctx);
+
     return -1;
 }
 
-int send_data(const unsigned char *buffer, int len)
+int send_data(unsigned char *buffer, int len)
 {
     int sent = 0;
     while (sent < len)
@@ -180,7 +181,7 @@ unsigned char *join_con_req(const char *id, const char *passwd, int *buflen)
     hdr.flag    = PROTO_REQ;
     
     totlen = sizeof(proto_hdr_t) 
-                + sizeof(uint8_t) + strlen(id) + 
+                + sizeof(uint8_t) + strlen(id)
                 + sizeof(uint8_t) + strlen(passwd);
 
     buffer = (unsigned char *)calloc(1, totlen);

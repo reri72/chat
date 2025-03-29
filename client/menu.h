@@ -8,9 +8,6 @@ typedef enum
     HOME_EXIT
 } HOME_ENUM;
 
-#define MAX_ID_LENGTH 20
-#define MAX_PASSWORD_LENGTH 20
-
 int home();
 int login();
 void join();

@@ -134,8 +134,8 @@ int login()
 
 void join()
 {
-    char id[50] = {0,};
-    char password[50] = {0,};
+    char id[MAX_ID_LENGTH] = {0,};
+    char password[MAX_PASSWORD_LENGTH] = {0,};
     unsigned char *buffer = NULL;
     int len = 0;
 
@@ -143,7 +143,7 @@ void join()
 
     puts("============================");
     get_id("NEW ID : ", id, sizeof(id), MAX_ID_LENGTH);
-    get_password("PASSWORD : ", password, sizeof(password));
+    get_password("PASSWORD : ", password, MAX_PASSWORD_LENGTH);
     puts("============================");
 
     buffer = join_con_req(id, password, &len);
@@ -155,12 +155,11 @@ void join()
     {
         if (send_data(buffer, len) != -1)
         {
-            // do somethings..
-                puts("user create success");
+            puts("user create request success");
         }
         else
         {
-            puts("user create failed");
+            puts("user create request failed");
         }
     }
 
