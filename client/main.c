@@ -34,6 +34,21 @@ int main(int argc, char **argv)
         fprintf(stderr, "chat_client_init() \n");
         exit(1);
     }
+
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, thread_client_communication, (void*)NULL) == 0)
+    {
+        if (pthread_detach(thread) != 0)
+        {
+            perror("pthread_detach");
+            goto ENTRY;
+        }
+    }
+    else
+    {
+        perror("pthread_create");
+        goto ENTRY;
+    }
     
     while (exit_flag == 0)
     {
@@ -47,7 +62,7 @@ int main(int argc, char **argv)
                 if (ret == 0)
                     goto ENTRY;
                 else
-                    exit(0);
+                    goto ENTRY;
             }
             case HOME_JOIN:
             {

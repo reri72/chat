@@ -94,10 +94,10 @@ int chat_client_end()
         }
     }
 
-    if (client_sock >= 0)
-        close_sock(&client_sock);
-
     cleanup_ssl(&ssl, &ctx);
+
+    if (client_sock >= 0)
+        close_sock(&client_sock);    
 
     return -1;
 }
@@ -127,39 +127,43 @@ int send_data(unsigned char *buffer, int len)
 
 int recv_data(unsigned char *buffer, int bufsize)
 {
-    fd_set read_fds;
-    struct timeval timeout;
     int bytes = 0;
-
-    FD_ZERO(&read_fds);
-    FD_SET(SSL_get_fd(ssl), &read_fds);
-
-    timeout.tv_sec = 5; // 옵션으로 빼도 될듯
-    timeout.tv_usec = 0;
-
-    int ret = select(SSL_get_fd(ssl) + 1, &read_fds, NULL, NULL, &timeout);
-    if (ret < 0)
-    {
-        perror("select() failed");
-        return -1;
-    }
-    else if (ret == 0)
-    {
-        fprintf(stderr, "timeout.\n");
-        return -1;
-    }
-
     memset(buffer, 0, bufsize);
-    bytes = SSL_read(ssl, buffer, bufsize - 1);
-    if (bytes <= 0)
+
+    while ((bytes = SSL_read(ssl, buffer, bufsize - 1)) <= 0)
     {
-        int err = SSL_get_error(ssl, bytes);
-        if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_READ )
+        if (bytes < -1)
         {
-            fprintf(stderr, "%s \n", ERR_reason_error_string(err));
+            fprintf(stderr, "Error: SSL_read returned unexpected value %d\n", bytes);
+            return -1;
         }
 
-        fprintf(stderr, "SSL_read failed: %s\n", ERR_reason_error_string(err));
+        if (ssl == NULL)
+        {
+            fprintf(stderr, "SSL is NULL\n");
+            return -1;
+        }
+
+        if (!SSL_is_init_finished(ssl))
+        {
+            fprintf(stderr, "Handshake not finished. Cannot read/write data \n");
+            return -1;
+        }
+
+        int err = SSL_get_error(ssl, bytes);
+        if (err == SSL_ERROR_WANT_READ)
+        {
+            nano_sleep(1,0);
+            continue;
+        }
+
+        if (err == SSL_ERROR_ZERO_RETURN)
+        {
+            fprintf(stdout, "Disconnected Server \n");
+            return -1;
+        }
+
+        fprintf(stderr, "SSL_read failed (%s)\n", ERR_reason_error_string(err));
         return -1;
     }
 
@@ -167,7 +171,36 @@ int recv_data(unsigned char *buffer, int bufsize)
     return bytes;
 }
 
-unsigned char *join_con_req(const char *id, const char *passwd, int *buflen)
+void *thread_client_communication(void *arg)
+{
+    while (exit_flag == 0)
+    {
+        proto_hdr_t hdr = {0,0};
+        unsigned char packet[BUFFER_SIZE] = {0,};
+
+        int bytes = recv_data(packet, sizeof(packet));
+        if (bytes <= 0)
+            break;
+        
+        read_header(&hdr, packet);
+        switch (hdr.proto)
+        {
+            case PROTO_CREATE_USER:
+                {
+                    parse_join_res(packet);
+                } break;
+            
+            default:
+                break;
+        }
+    }
+
+    exit_flag = 1;
+
+    return NULL;
+}
+
+unsigned char *join_req(const char *id, const char *passwd, int *buflen)
 {
     unsigned char *buffer = NULL;
     size_t totlen = 0;
@@ -202,4 +235,19 @@ unsigned char *join_con_req(const char *id, const char *passwd, int *buflen)
     WRITE_BUFF(p, passwd, len);
 
     return buffer;
+}
+
+void parse_join_res(unsigned char *packet)
+{
+    unsigned char *p = packet;
+    int8_t qres = FAILED;
+
+    p += sizeof(proto_hdr_t);
+
+    memcpy(&qres, p, sizeof(qres));
+
+    if (qres == SUCCESS)
+        fprintf(stdout, "join success!! \n");
+    else
+        fprintf(stdout, "join failed!! \n");
 }

@@ -23,7 +23,7 @@ int send_data(SSL *ssl, unsigned char *data, size_t len);
 void close_client_peer(client_t *client);
 
 int join_con_res(SSL *ssl, unsigned char *packet);
-void join_read_data(unsigned char *packets, int8_t *qres);
+void join_user_process(unsigned char *packets, int8_t *qres);
 
 extern volatile sig_atomic_t exit_flag;
 
@@ -106,6 +106,12 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
 
     while ((bytes = SSL_read(ssl, buffer, bufsize - 1)) <= 0)
     {
+        if (!SSL_is_init_finished(ssl))
+        {
+            fprintf(stderr, "Handshake not finished. Cannot read/write data \n");
+            return -1;
+        }
+        
         int err = SSL_get_error(ssl, bytes);
         if (err == SSL_ERROR_WANT_READ)
         {
@@ -243,7 +249,7 @@ void *thread_accept_client(void* arg)
             printf("new connection(%d) from %s(%u):%u \n", 
                         client->sockfd, client->ip, client->ipaddr, client->port);
 
-            if (pthread_create(&thread, NULL, thread_client_communication, (void*)client) == 0)
+            if (pthread_create(&thread, NULL, thread_server_communication, (void*)client) == 0)
             {
                 if (pthread_detach(thread) != 0)
                 {
@@ -262,7 +268,7 @@ void *thread_accept_client(void* arg)
     return NULL;
 }
 
-void *thread_client_communication(void* arg)
+void *thread_server_communication(void* arg)
 {
     client_t *client = (client_t *)arg;
     SSL *ssl = client->ssl;
@@ -276,23 +282,18 @@ void *thread_client_communication(void* arg)
         if (bytes <= 0)
             break;
         
-        memcpy(&hdr, packet, sizeof(hdr));
-        uint16_t ptoro = ntohs(hdr.proto);
-
-        switch (ptoro)
+        read_header(&hdr, packet);
+        switch (hdr.proto)
         {
             case PROTO_CREATE_USER:
                 {
                     if (join_con_res(ssl, packet))
-                        fprintf(stdout, "user create success\n");
+                        fprintf(stdout, "join response success \n");
                 } break;
 
             default:
                 break;
         }
-
-        break;
-        // do somethings ..
     }
     
     printf("exit client : %s \n ", client->ip);
@@ -305,7 +306,7 @@ void *thread_client_communication(void* arg)
 
 int join_con_res(SSL *ssl, unsigned char *packet)
 {
-    int ret = 0;
+    int ret = FAILED;
     unsigned char *buffer = NULL, *pp = NULL;
 
     size_t totlen = 0;
@@ -326,7 +327,7 @@ int join_con_res(SSL *ssl, unsigned char *packet)
 
     WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
 
-    join_read_data(packet, &qres);
+    join_user_process(packet, &qres);
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
 
@@ -337,7 +338,7 @@ int join_con_res(SSL *ssl, unsigned char *packet)
     return ret;
 }
 
-void join_read_data(unsigned char *packet, int8_t *qres)
+void join_user_process(unsigned char *packet, int8_t *qres)
 {
     unsigned char *pp = packet;
 

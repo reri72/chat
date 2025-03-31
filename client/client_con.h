@@ -7,6 +7,10 @@ int chat_client_end();
 int send_data(unsigned char *buffer, int len);
 int recv_data(unsigned char *buffer, int bufsize);
 
-unsigned char *join_con_req(const char *id, const char *passwd, int *buflen);
+void *thread_client_communication(void *arg);
+
+unsigned char *join_req(const char *id, const char *passwd, int *buflen);
+void parse_join_res(unsigned char *packet);
+
 
 #endif

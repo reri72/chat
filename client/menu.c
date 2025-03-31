@@ -44,7 +44,7 @@ void get_id(char *prompt, char *input_buffer, int buffer_size, int max_length)
 
         len = strlen(input_buffer);
 
-        if (len == 0 || len > max_length)
+        if (len < 3 || len > max_length)
         {
             printf("invaild id length (%d/%d)\n", len, max_length);
         }
@@ -89,7 +89,7 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
     echo_on_terminal();
     printf("\n");
 
-    if (i == 0 || i > MAX_PASSWORD_LENGTH)
+    if (i < 5 || i > MAX_PASSWORD_LENGTH)
     {
         printf("invaild password length (%d/%d) \n", i, MAX_PASSWORD_LENGTH);
         get_password(prompt, password_buffer, buffer_size);
@@ -146,7 +146,7 @@ void join()
     get_password("PASSWORD : ", password, MAX_PASSWORD_LENGTH);
     puts("============================");
 
-    buffer = join_con_req(id, password, &len);
+    buffer = join_req(id, password, &len);
     if (buffer == NULL)
     {
         puts("user create failed");
