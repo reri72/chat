@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "server_sql.h"
-#include "myutils.h"
+#include "sockC.h"
 
 extern MYSQL *conn;
 
@@ -10,9 +10,22 @@ int join_user(const char *id, const char *passwd)
 {
     MYSQL_RES *result = NULL;
     MYSQL_ROW row;
-
+    
     char query[256] = {0,};
 
+    unsigned char enc_passwd[EVP_MAX_MD_SIZE] = {0,};
+    char *base64passwd = NULL;
+    int encpwlen = strlen(passwd);
+
+    SHA256_encrypt((unsigned char *)passwd, encpwlen, enc_passwd);
+    
+    base64passwd = BASE64_encode(enc_passwd, (EVP_MAX_MD_SIZE/2));
+    if (base64passwd == NULL)
+    {
+        fprintf(stderr, "password encode failed. \n");
+        return -1;
+    }
+    
     snprintf(query, sizeof(query), 
                 "SELECT ID FROM CLIENT_INFO WHERE USERNAME = '%s'",
                 id);
@@ -20,7 +33,7 @@ int join_user(const char *id, const char *passwd)
     if (mysql_query(conn, query))
     {
         fprintf(stderr, "query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        free(base64passwd);
         return -1;
     }
 
@@ -28,6 +41,7 @@ int join_user(const char *id, const char *passwd)
     if (result == NULL)
     {
         fprintf(stderr, "mysql_store_result() failed: %s\n", mysql_error(conn));
+        free(base64passwd);
         return -1;
     }
 
@@ -35,6 +49,7 @@ int join_user(const char *id, const char *passwd)
     if (row)
     {
         fprintf(stdout, "already exist user : %s \n", id);
+        free(base64passwd);
         mysql_free_result(result);
         return -1;
     }
@@ -44,14 +59,16 @@ int join_user(const char *id, const char *passwd)
     memset(&query, 0, sizeof(query));
     snprintf(query, sizeof(query), 
                 "INSERT INTO CLIENT_INFO (USERNAME, PASSWORD) VALUES ('%s', '%s')", 
-                id, passwd);
+                id, base64passwd);
 
     if (mysql_query(conn, query))
     {
         fprintf(stderr, "query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        free(base64passwd);
         return -1;
     }
+    
+    free(base64passwd);
     
     return 0;
 }

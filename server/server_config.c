@@ -108,7 +108,7 @@ void server_db_configure()
     const char *db_client_query =  "CREATE TABLE IF NOT EXISTS CLIENT_INFO ("
                                      "ID INT AUTO_INCREMENT PRIMARY KEY, "
                                      "USERNAME VARCHAR(20) NOT NULL, "
-                                     "PASSWORD VARCHAR(50) NOT NULL, "
+                                     "PASSWORD VARCHAR(44) NOT NULL, "
                                      "LAST_LOGIN_TIME TIMESTAMP NULL DEFAULT NULL)";
     if (mysql_query(conn, db_client_query))
     {
