@@ -31,7 +31,7 @@ void echo_on_terminal()
     tcsetattr(STDIN_FILENO, TCSANOW, &old_setting);
 }
 
-void get_id(char *prompt, char *input_buffer, int buffer_size, int max_length)
+void get_id(char *prompt, char *input_buffer, int buffer_size)
 {
     int len = 0;
     while (exit_flag == 0)
@@ -44,14 +44,14 @@ void get_id(char *prompt, char *input_buffer, int buffer_size, int max_length)
 
         len = strlen(input_buffer);
 
-        if (len < 3 || len > max_length)
+        if (len < 3 || len > buffer_size)
         {
-            printf("invaild id length (%d/%d)\n", len, max_length);
+            printf("invaild id length (%d/%d)\n", len, buffer_size);
+            memset(input_buffer, 0, buffer_size);
+            continue;
         }
-        else
-        {
-            break;
-        }
+        
+        break;
     }
 }
 
@@ -61,38 +61,44 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
     int i = 0;
 
     echo_off_terminal();
-    printf("%s", prompt);
-
-    while (i < buffer_size - 1)
+    
+    while (exit_flag == 0)
     {
-        ch = getchar();
-        if (ch == '\n')  // Enter
+        printf("%s", prompt);
+        while (i < buffer_size - 1)
         {
-            break;
-        }
-        else if (ch == 127 || ch == 8)  // backspace
-        {
-            if (i > 0)
+            ch = getchar();
+            if (ch == '\n')  // Enter
             {
-                i--;
-                printf("\b \b");
+                break;
+            }
+            else if (ch == 127 || ch == 8)  // backspace
+            {
+                if (i > 0)
+                {
+                    i--;
+                    printf("\b \b");
+                }
+            }
+            else
+            {
+                password_buffer[i++] = ch;
+                printf("*");
             }
         }
-        else
+
+        password_buffer[i] = '\0';
+        echo_on_terminal();
+        printf("\n");
+
+        if (i < 5 || i > MAX_PASSWORD_LENGTH)
         {
-            password_buffer[i++] = ch;
-            printf("*");
+            printf("invaild password length (%d/%d) \n", i, MAX_PASSWORD_LENGTH);
+            memset(password_buffer, 0, buffer_size);
+            continue;
         }
-    }
 
-    password_buffer[i] = '\0';
-    echo_on_terminal();
-    printf("\n");
-
-    if (i < 5 || i > MAX_PASSWORD_LENGTH)
-    {
-        printf("invaild password length (%d/%d) \n", i, MAX_PASSWORD_LENGTH);
-        get_password(prompt, password_buffer, buffer_size);
+        break;
     }
 }
 
@@ -129,7 +135,41 @@ int home()
 
 int login()
 {
-    return 0;
+    char id[MAX_ID_LENGTH]              = {0,};
+    char password[MAX_PASSWORD_LENGTH]  = {0,};
+    
+    unsigned char *buffer = NULL;
+    int len = 0;
+
+    int ret = 0;
+
+    system("/usr/bin/clear");
+
+    get_id("ID : ", id, sizeof(id));
+    get_password("PASSWORD : ", password, sizeof(password));
+
+    buffer = login_req(id, password, &len);
+    if (buffer == NULL)
+    {
+        puts("login packet create failed");
+        ret = -1;
+    }
+    else
+    {
+        if (send_data(buffer, len) != -1)
+        {
+            puts("user login request success");
+        }
+        else
+        {
+            puts("user login request failed");
+            ret = -1;
+        }
+    }
+
+    FREE(buffer);
+
+    return ret;
 }
 
 void join()
@@ -142,8 +182,8 @@ void join()
     system("/usr/bin/clear");
 
     puts("============================");
-    get_id("NEW ID : ", id, sizeof(id), MAX_ID_LENGTH);
-    get_password("PASSWORD : ", password, MAX_PASSWORD_LENGTH);
+    get_id("NEW ID : ", id, sizeof(id));
+    get_password("PASSWORD : ", password, sizeof(password));
     puts("============================");
 
     buffer = join_req(id, password, &len);

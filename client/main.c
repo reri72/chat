@@ -58,11 +58,8 @@ int main(int argc, char **argv)
         {
             case HOME_LOGIN:
             {
-                ret = login();
-                if (ret == 0)
-                    goto ENTRY;
-                else
-                    goto ENTRY;
+                login();
+                break;
             }
             case HOME_JOIN:
             {

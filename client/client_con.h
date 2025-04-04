@@ -12,5 +12,7 @@ void *thread_client_communication(void *arg);
 unsigned char *join_req(const char *id, const char *passwd, int *buflen);
 void parse_join_res(unsigned char *packet);
 
+unsigned char *login_req(const char *id, const char *passwd, int *buflen);
+void parse_login_res(unsigned char *packet);
 
 #endif

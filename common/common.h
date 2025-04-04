@@ -25,7 +25,8 @@
 #define MAX_ID_LENGTH 20
 #define MAX_PASSWORD_LENGTH 50
 
-#define PROTO_CREATE_USER   100
+#define PROTO_CREATE_USER       100
+#define PROTO_LOGIN_USER        101
 
 #define PROTO_REQ   0
 #define PROTO_RES   1

@@ -22,8 +22,12 @@ int send_data(SSL *ssl, unsigned char *data, size_t len);
 
 void close_client_peer(client_t *client);
 
+// ------------------------------------------------------------------
 int join_con_res(SSL *ssl, unsigned char *packet);
-void join_user_process(unsigned char *packets, int8_t *qres);
+void join_user_process(unsigned char *packet, int8_t *qres);
+int user_login_res(SSL *ssl, unsigned char *packet);
+void login_user_process(unsigned char *packet, int8_t *qres);
+// ------------------------------------------------------------------
 
 extern volatile sig_atomic_t exit_flag;
 
@@ -291,6 +295,12 @@ void *thread_server_communication(void* arg)
                         fprintf(stdout, "join response success \n");
                 } break;
 
+            case PROTO_LOGIN_USER:
+                {
+                    if (user_login_res(ssl, packet))
+                        fprintf(stdout, "login response success \n");
+                } break;
+
             default:
                 break;
         }
@@ -355,4 +365,57 @@ void join_user_process(unsigned char *packet, int8_t *qres)
     READ_BUFF(passwd, pp, len);
 
     *qres = join_user(id, passwd);
+}
+
+int user_login_res(SSL *ssl, unsigned char *packet)
+{
+    int ret = FAILED;
+    unsigned char *buffer = NULL, *pp = NULL;
+
+    size_t totlen = 0;
+    int8_t qres = FAILED;
+    proto_hdr_t hdr;
+
+    memset(&hdr, 0, sizeof(proto_hdr_t));
+
+    totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
+    buffer = (unsigned char *)malloc(totlen);
+    if (buffer == NULL)
+        return -1;
+
+    pp = buffer;
+
+    hdr.proto   = htons(PROTO_LOGIN_USER);
+    hdr.flag    = PROTO_RES;
+
+    WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
+
+    login_user_process(packet, &qres);
+
+    WRITE_BUFF(pp, &qres, sizeof(qres));
+
+    ret = send_data(ssl, buffer, totlen);
+
+    FREE(buffer);
+
+    return ret;
+}
+
+void login_user_process(unsigned char *packet, int8_t *qres)
+{
+    unsigned char *pp = packet;
+
+    char id[MAX_ID_LENGTH] = {0,};
+    char passwd[MAX_PASSWORD_LENGTH] = {0,};
+    uint8_t len = 0;
+
+    pp += sizeof(proto_hdr_t);
+
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(id, pp, len);
+    
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(passwd, pp, len);
+
+    *qres = login_user(id, passwd);
 }

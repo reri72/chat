@@ -77,27 +77,32 @@ int chat_client_end()
     {
         int ret = SSL_shutdown(ssl);
         if (ret == 0)
+        {
             ret = SSL_shutdown(ssl);
-
-        if (ret < 0)
+            if (ret < 0)
+            {
+                int err = SSL_get_error(ssl, ret);
+                if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+                    fprintf(stderr, "SSL shutdown needs retry\n");
+                else if (err == SSL_ERROR_SYSCALL)
+                    fprintf(stderr, "SSL shutdown syscall error: socket closed early\n");
+                else if (err == SSL_ERROR_SSL)
+                    fprintf(stderr, "SSL shutdown protocol error\n");
+                else
+                    fprintf(stderr, "SSL shutdown failed with error %d\n", err);
+            }
+        }
+        else if (ret < 0)
         {
             int err = SSL_get_error(ssl, ret);
-            
-            if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-                fprintf(stderr, "SSL shutdown needs retry\n");
-            else if (err == SSL_ERROR_SYSCALL)
-                fprintf(stderr, "SSL shutdown syscall error: socket closed early\n");
-            else if (err == SSL_ERROR_SSL)
-                fprintf(stderr, "SSL shutdown protocol error\n");
-            else
-                fprintf(stderr, "SSL shutdown failed with error %d\n", err);
+            fprintf(stderr, "SSL_shutdown() failed: %d\n", err);
         }
     }
 
     cleanup_ssl(&ssl, &ctx);
 
     if (client_sock >= 0)
-        close_sock(&client_sock);    
+        close_sock(&client_sock);
 
     return -1;
 }
@@ -189,7 +194,12 @@ void *thread_client_communication(void *arg)
                 {
                     parse_join_res(packet);
                 } break;
-            
+
+            case PROTO_LOGIN_USER:
+                {
+                    parse_login_res(packet);
+                } break;
+
             default:
                 break;
         }
@@ -202,14 +212,14 @@ void *thread_client_communication(void *arg)
 
 unsigned char *join_req(const char *id, const char *passwd, int *buflen)
 {
-    unsigned char *buffer = NULL;
+    unsigned char *buffer   = NULL;
+    unsigned char *p        = NULL;
+
     size_t totlen = 0;
     uint8_t len = 0;
-    proto_hdr_t hdr;
-    unsigned char *p = NULL;
 
-    memset(&hdr, 0, sizeof(proto_hdr_t));
-
+    proto_hdr_t hdr = {0,};
+    
     hdr.proto   = htons(PROTO_CREATE_USER);
     hdr.flag    = PROTO_REQ;
     
@@ -250,4 +260,56 @@ void parse_join_res(unsigned char *packet)
         fprintf(stdout, "join success!! \n");
     else
         fprintf(stdout, "join failed!! \n");
+}
+
+unsigned char *login_req(const char *id, const char *passwd, int *buflen)
+{
+    unsigned char *buffer   = NULL;
+    unsigned char *p        = NULL;
+
+    uint8_t len     = 0;
+    size_t totlen   = 0;
+    
+    proto_hdr_t hdr = {0,};
+
+    hdr.proto   = htons(PROTO_LOGIN_USER);
+    hdr.flag    = PROTO_REQ;
+
+    totlen = sizeof(proto_hdr_t) 
+                + sizeof(uint8_t) + strlen(id)
+                + sizeof(uint8_t) + strlen(passwd);
+
+    buffer = (unsigned char *)calloc(1, totlen);
+    if (buffer == NULL)
+        return NULL;
+
+    p = buffer;
+    *buflen = totlen;
+
+    WRITE_BUFF(p, &hdr, sizeof(proto_hdr_t));
+
+    len = strlen(id);
+    WRITE_BUFF(p, &len, sizeof(uint8_t));
+    WRITE_BUFF(p, id, len);
+
+    len = strlen(passwd);
+    WRITE_BUFF(p, &len, sizeof(uint8_t));
+    WRITE_BUFF(p, passwd, len);
+
+    return buffer;
+}
+
+void parse_login_res(unsigned char *packet)
+{
+    unsigned char *p = packet;
+    int8_t qres = FAILED;
+
+    p += sizeof(proto_hdr_t);
+
+    memcpy(&qres, p, sizeof(qres));
+
+    if (qres == SUCCESS)
+        fprintf(stdout, "login success!! \n");
+    else
+        fprintf(stdout, "login failed!! \n");
 }

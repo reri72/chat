@@ -72,3 +72,9 @@ int join_user(const char *id, const char *passwd)
     
     return 0;
 }
+
+int login_user(const char *id, const char *passwd)
+{
+    
+    return 0;
+}
