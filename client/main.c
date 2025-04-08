@@ -6,10 +6,12 @@
 #include "client_con.h"
 #include "menu.h"
 
+#include "common.h"
 #include "socks.h"
 #include "sslUtils.h"
 
 volatile sig_atomic_t exit_flag = 0;
+char username[MAX_ID_LENGTH] = {0,};
 
 extern void fill_client_conf_value();
 
@@ -34,31 +36,16 @@ int main(int argc, char **argv)
         fprintf(stderr, "chat_client_init() \n");
         exit(1);
     }
-
-    pthread_t thread;
-    if (pthread_create(&thread, NULL, thread_client_communication, (void*)NULL) == 0)
-    {
-        if (pthread_detach(thread) != 0)
-        {
-            perror("pthread_detach");
-            goto ENTRY;
-        }
-    }
-    else
-    {
-        perror("pthread_create");
-        goto ENTRY;
-    }
     
+    int loginok = -1;
     while (exit_flag == 0)
     {
-        int ret = home();
-        
+        int ret = home(loginok);
         switch (ret)
         {
             case HOME_LOGIN:
             {
-                login();
+                loginok = login();
                 break;
             }
             case HOME_JOIN:
@@ -66,7 +53,18 @@ int main(int argc, char **argv)
                 join();
                 break;
             }
-            case HOME_EXIT:
+            case HOME_LOGOUT:
+            {
+                logout();
+                loginok = -1;
+                break;
+            }
+            case HOME_CHAT:
+            {
+                
+            }
+            case HOME_EXIT1:
+            case HOME_EXIT2:
             default:
             {
                 printf("bye \n");

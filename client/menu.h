@@ -4,12 +4,18 @@
 typedef enum
 {
     HOME_LOGIN  = 1,
-    HOME_JOIN   = 2,
-    HOME_EXIT
+    HOME_JOIN,
+    HOME_EXIT1,
+    HOME_LOGOUT,
+    HOME_CHAT,
+    HOME_EXIT2
 } HOME_ENUM;
 
-int home();
+int home(int loginok);
 int login();
 void join();
+
+void logout();
+void chat();
 
 #endif

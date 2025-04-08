@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -9,9 +10,11 @@
 #include "common.h"
 #include "client_con.h"
 #include "menu.h"
-#include "utiles.h"
+
+#include "sockC.h"
 
 extern volatile sig_atomic_t exit_flag;
+extern char username[MAX_ID_LENGTH];
 
 void echo_off_terminal()
 {
@@ -102,28 +105,50 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
     }
 }
 
-int home()
+int home(int loginok)
 {
-    char home_choice[4][8] = {"", "login", "join", "exit"};
+    char home_choice[7][8] = {"", "login", "join", "exit", "logout", "chat", "exit"};
     int ret = 0;
 
     system("/usr/bin/clear");
     
+    printf("[%s:%d] loginok : %d \n", __FUNCTION__, __LINE__, loginok);
     while (1)
     {
         puts("======== HELLO CHAT ========");
-        printf("1. %s \n", home_choice[1]);
-        printf("2. %s \n", home_choice[2]);
-        printf("3. %s \n", home_choice[3]);
-        puts("============================");
-        puts("your choice > ");
+        if (loginok == SUCCESS)
+        {
+            printf("* %s \n", username);
+            printf("1. %s \n", home_choice[4]);
+            printf("2. %s \n", home_choice[5]);
+            printf("3. %s \n", home_choice[6]);
+            puts("============================");
+            puts("your choice > ");
 
-        scanf("%d", &ret);
-        while (getchar() != '\n');
-        if (ret > 0 && ret < 4)
-            break;
+            scanf("%d", &ret);
+            ret += 3;
 
-        printf("Invalid menu (%d)\n", ret);
+            while (getchar() != '\n');
+            if (ret > 3 && ret < 7)
+                break;
+            
+            printf("Invalid menu (%d)\n", ret-3);
+        }
+        else
+        {
+            printf("1. %s \n", home_choice[1]);
+            printf("2. %s \n", home_choice[2]);
+            printf("3. %s \n", home_choice[3]);
+            puts("============================");
+            puts("your choice > ");
+
+            scanf("%d", &ret);
+            while (getchar() != '\n');
+            if (ret > 0 && ret < 4)
+                break;
+
+            printf("Invalid menu (%d)\n", ret);
+        }
         nano_sleep(1, 0);
 
         system("/usr/bin/clear");
@@ -141,7 +166,7 @@ int login()
     unsigned char *buffer = NULL;
     int len = 0;
 
-    int ret = 0;
+    int ret = FAILED;
 
     system("/usr/bin/clear");
 
@@ -151,19 +176,37 @@ int login()
     buffer = login_req(id, password, &len);
     if (buffer == NULL)
     {
-        puts("login packet create failed");
-        ret = -1;
+        fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
     }
     else
     {
         if (send_data(buffer, len) != -1)
         {
-            puts("user login request success");
+            int pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+            unsigned char *recvpkt = malloc(pktsz);
+            if (recvpkt)
+            {
+                if (recv_data(recvpkt, sizeof(recvpkt)) <= 0)
+                {
+                    fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    if ( (ret = parse_login_res(recvpkt)) == 0 )
+                    {
+                        memcpy(username, id, strlen(id));
+                    }
+                }
+                FREE(recvpkt);
+            }
+            else
+            {
+                fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+            }
         }
         else
         {
-            puts("user login request failed");
-            ret = -1;
+            fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
         }
     }
 
@@ -189,19 +232,46 @@ void join()
     buffer = join_req(id, password, &len);
     if (buffer == NULL)
     {
-        puts("user create failed");
+        fprintf(stdout, "join failed \n");
     }
     else
     {
         if (send_data(buffer, len) != -1)
         {
-            puts("user create request success");
+            int pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+            unsigned char *recvpkt = malloc(pktsz);
+            if (recvpkt)
+            {
+                if (recv_data(recvpkt, sizeof(recvpkt)) <= 0)
+                {
+                    fprintf(stdout, "join failed \n");
+                }
+                else
+                {
+                    parse_join_res(recvpkt);
+                }
+                FREE(recvpkt);
+            }
+            else
+            {
+                fprintf(stdout, "join failed \n");
+            }
         }
         else
         {
-            puts("user create request failed");
+            fprintf(stdout, "join failed \n");
         }
     }
 
     FREE(buffer);
+}
+
+void logout()
+{
+    memset(&username, 0, sizeof(username));
+}
+
+void chat()
+{
+
 }

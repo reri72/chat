@@ -176,40 +176,6 @@ int recv_data(unsigned char *buffer, int bufsize)
     return bytes;
 }
 
-void *thread_client_communication(void *arg)
-{
-    while (exit_flag == 0)
-    {
-        proto_hdr_t hdr = {0,0};
-        unsigned char packet[BUFFER_SIZE] = {0,};
-
-        int bytes = recv_data(packet, sizeof(packet));
-        if (bytes <= 0)
-            break;
-        
-        read_header(&hdr, packet);
-        switch (hdr.proto)
-        {
-            case PROTO_CREATE_USER:
-                {
-                    parse_join_res(packet);
-                } break;
-
-            case PROTO_LOGIN_USER:
-                {
-                    parse_login_res(packet);
-                } break;
-
-            default:
-                break;
-        }
-    }
-
-    exit_flag = 1;
-
-    return NULL;
-}
-
 unsigned char *join_req(const char *id, const char *passwd, int *buflen)
 {
     unsigned char *buffer   = NULL;
@@ -257,9 +223,9 @@ void parse_join_res(unsigned char *packet)
     memcpy(&qres, p, sizeof(qres));
 
     if (qres == SUCCESS)
-        fprintf(stdout, "join success!! \n");
+        fprintf(stdout, "join success \n");
     else
-        fprintf(stdout, "join failed!! \n");
+        fprintf(stdout, "join failed \n");
 }
 
 unsigned char *login_req(const char *id, const char *passwd, int *buflen)
@@ -299,17 +265,21 @@ unsigned char *login_req(const char *id, const char *passwd, int *buflen)
     return buffer;
 }
 
-void parse_login_res(unsigned char *packet)
+int parse_login_res(unsigned char *packet)
 {
-    unsigned char *p = packet;
-    int8_t qres = FAILED;
+    unsigned char *ptr = packet;
+    int8_t res = FAILED;
 
-    p += sizeof(proto_hdr_t);
+    ptr += sizeof(proto_hdr_t);
 
-    memcpy(&qres, p, sizeof(qres));
+    memcpy(&res, ptr, sizeof(int8_t));
 
-    if (qres == SUCCESS)
-        fprintf(stdout, "login success!! \n");
+    fprintf(stdout, "res : %d \n", res);
+
+    if (res == SUCCESS)
+        fprintf(stdout, "login success \n");
     else
-        fprintf(stdout, "login failed!! \n");
+        fprintf(stdout, "login failed \n");
+    
+    return res;
 }
