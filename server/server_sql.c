@@ -124,8 +124,20 @@ int login_user(const char *id, const char *passwd)
     }
 
     if ( strstr(base64passwd, row[0]) != NULL )
-        ret = 0;
+    {
+        ret = SUCCESS;
 
+        memset(&query, 0, sizeof(query));
+        snprintf(query, sizeof(query), 
+            "UPDATE CLIENT_INFO SET LAST_LOGIN_TIME = now() "
+            "WHERE USERNAME = '%s' ", id);
+        if (mysql_query(conn, query))
+        {
+            fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+            ret = FAILED;
+        }        
+    }
+    
     mysql_free_result(result);
     
     free(base64passwd);

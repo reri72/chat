@@ -59,6 +59,12 @@ int chat_server_init()
     sock_set_reuse(server_sock);
     sock_set_no_delay(server_sock);
 
+    if (sock_set_nonblocking(server_sock) != SUCCESS)
+    {
+        fprintf(stderr, "sock_set_nonblocking");
+        return chat_server_end();
+    }
+
     return 0;
 }
 
@@ -193,7 +199,6 @@ void *thread_accept_client(void* arg)
         int ret = select(server_sock + 1, &readfds, NULL, NULL, &tm);
         if (ret < 0)
         {
-            perror("select failed");
             break;
         }
         else if (ret == 0)
@@ -394,6 +399,7 @@ int user_login_res(SSL *ssl, unsigned char *packet)
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
 
+    nano_sleep(2,0);
     ret = send_data(ssl, buffer, totlen);
 
     FREE(buffer);

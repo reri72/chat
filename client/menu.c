@@ -112,7 +112,6 @@ int home(int loginok)
 
     system("/usr/bin/clear");
     
-    printf("[%s:%d] loginok : %d \n", __FUNCTION__, __LINE__, loginok);
     while (1)
     {
         puts("======== HELLO CHAT ========");
