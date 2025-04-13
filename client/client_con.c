@@ -66,6 +66,12 @@ int chat_client_init()
         return chat_client_end();
     }
 
+    if (sock_set_nonblocking(client_sock) != SUCCESS)
+    {
+        fprintf(stderr, "sock_set_nonblocking");
+        return chat_client_end();
+    }
+
     sock_set_no_delay(client_sock);
     
     return 0;
@@ -110,8 +116,22 @@ int chat_client_end()
 int send_data(unsigned char *buffer, int len)
 {
     int sent = 0;
+
+    struct timeval tv = {3, 0};
+    fd_set wfds;
+
     while (sent < len)
     {
+        FD_ZERO(&wfds);
+        FD_SET(client_sock, &wfds);
+
+        if (select(client_sock + 1, NULL, &wfds, NULL, &tv) <= 0)
+        {
+            perror("select");
+            exit_flag = 1;
+            break;
+        }
+
         int ret = SSL_write(ssl, buffer + sent, len - sent);
         if (ret <= 0)
         {
@@ -123,6 +143,7 @@ int send_data(unsigned char *buffer, int len)
             }
 
             fprintf(stderr, "SSL_write failed: %s\n", ERR_reason_error_string(err));
+            exit_flag = 1;
             return -1;
         }
         sent += ret;
@@ -133,43 +154,49 @@ int send_data(unsigned char *buffer, int len)
 int recv_data(unsigned char *buffer, int bufsize)
 {
     int bytes = 0;
+    int timeout = 0;
+
+    fd_set readfds;
+    struct timeval tv = {3, 0};
+
     memset(buffer, 0, bufsize);
 
-    while ((bytes = SSL_read(ssl, buffer, bufsize - 1)) <= 0)
+    while (1)
     {
-        if (bytes < -1)
-        {
-            fprintf(stderr, "Error: SSL_read returned unexpected value %d\n", bytes);
-            return -1;
-        }
+        FD_ZERO(&readfds);
+        FD_SET(client_sock, &readfds);
 
-        if (ssl == NULL)
+        int ret = select(client_sock + 1, &readfds, NULL, NULL, &tv);
+        if (ret == -1)
         {
-            fprintf(stderr, "SSL is NULL\n");
-            return -1;
+            perror("select");
+            exit_flag = 1;
+            break;
         }
-
-        if (!SSL_is_init_finished(ssl))
+        else if (ret == 0)
         {
-            fprintf(stderr, "Handshake not finished. Cannot read/write data \n");
-            return -1;
-        }
-
-        int err = SSL_get_error(ssl, bytes);
-        if (err == SSL_ERROR_WANT_READ)
-        {
-            nano_sleep(1,0);
+            timeout++;
             continue;
         }
 
-        if (err == SSL_ERROR_ZERO_RETURN)
+        bytes = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
+        if (bytes > 0)
         {
-            fprintf(stdout, "Disconnected Server \n");
-            return -1;
+            break;
         }
-
-        fprintf(stderr, "SSL_read failed (%s)\n", ERR_reason_error_string(err));
-        return -1;
+        else
+        {
+            int ssl_error = SSL_get_error(ssl, bytes);
+            if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE)
+            {
+                nano_sleep(1,0);
+                continue;
+            }
+            
+            exit_flag = 1;
+            ERR_print_errors_fp(stderr);
+            break;
+        }
     }
     
     return bytes;

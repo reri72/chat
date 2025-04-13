@@ -21,14 +21,23 @@ void sighandle(int signum, siginfo_t *info, void *context);
 int main(int argc, char **argv)
 {
     struct sigaction sa;
+    struct sigaction sa_pipe;
+
+    memset(&sa, 0, sizeof(sa));
+    memset(&sa_pipe, 0, sizeof(sa_pipe));
+
     sa.sa_sigaction = sighandle;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO;
+
+    sa_pipe.sa_handler = SIG_IGN;
 
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGILL, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    
+    sigaction(SIGPIPE, &sa_pipe, NULL);
 
     fill_server_conf_value();
     server_db_configure();

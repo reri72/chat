@@ -19,10 +19,19 @@ void sighandle(int signum, siginfo_t *info, void *context);
 
 int main(int argc, char **argv)
 {
+    struct sigaction sa_pipe;
     struct sigaction sa;
+
+    memset(&sa_pipe, 0, sizeof(sa_pipe));
+    memset(&sa, 0, sizeof(sa));
+    
     sa.sa_sigaction = sighandle;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO;
+
+    sa_pipe.sa_handler = SIG_IGN;
+
+    sigaction(SIGPIPE, &sa_pipe, NULL);
 
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGILL, &sa, NULL);

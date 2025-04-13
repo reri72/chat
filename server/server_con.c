@@ -112,34 +112,47 @@ void close_client_peer(client_t *client)
 int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
 {
     int bytes = 0;
+
+    fd_set readfds;
+    struct timeval tv = {1, 0};
+
     memset(buffer, 0, bufsize);
 
-    while ((bytes = SSL_read(ssl, buffer, bufsize - 1)) <= 0)
+    while (1)
     {
-        if (!SSL_is_init_finished(ssl))
+        FD_ZERO(&readfds);
+        FD_SET(SSL_get_fd(ssl), &readfds);
+
+        int ret = select(SSL_get_fd(ssl) + 1, &readfds, NULL, NULL, &tv);
+        if (ret == -1)
         {
-            fprintf(stderr, "Handshake not finished. Cannot read/write data \n");
-            return -1;
+            perror("select");
+            break;
         }
-        
-        int err = SSL_get_error(ssl, bytes);
-        if (err == SSL_ERROR_WANT_READ)
+        else if (ret == 0)
         {
-            nano_sleep(1,0);
             continue;
         }
 
-        if (err == SSL_ERROR_ZERO_RETURN)
+        bytes = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
+        if (bytes > 0)
         {
-            fprintf(stdout, "Client disconnected cleanly\n");
-            return 0;
+            break;
         }
-
-        fprintf(stderr, "SSL_read failed (%s)\n", ERR_reason_error_string(err));
-        return -1;
+        else
+        {
+            int ssl_error = SSL_get_error(ssl, bytes);
+            if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE)
+            {
+                nano_sleep(1,0);
+                continue;
+            }
+            
+            ERR_print_errors_fp(stderr);
+            break;
+        }
     }
-
-    buffer[bytes] = '\0';
+    
     return bytes;
 }
 
@@ -147,8 +160,20 @@ int send_data(SSL *ssl, unsigned char *data, size_t len)
 {
     int sent = 0;
 
+    struct timeval tv = {1, 0};
+    fd_set wfds;
+
     while (sent < len)
     {
+        FD_ZERO(&wfds);
+        FD_SET(SSL_get_fd(ssl), &wfds);
+
+        if (select(SSL_get_fd(ssl) + 1, NULL, &wfds, NULL, &tv) <= 0)
+        {
+            perror("select");
+            break;
+        }
+
         int ret = SSL_write(ssl, data + sent, len - sent);
         if (ret <= 0)
         {
@@ -188,13 +213,10 @@ void *thread_accept_client(void* arg)
         int client_sock = -1;
         SSL *ssl = NULL;
         pthread_t thread;
-        struct timeval tm;
+        struct timeval tm = {1, 0};
 
         FD_ZERO(&readfds);
         FD_SET(server_sock, &readfds);
-
-        tm.tv_sec = 1;
-        tm.tv_usec = 0;
 
         int ret = select(server_sock + 1, &readfds, NULL, NULL, &tm);
         if (ret < 0)
