@@ -181,11 +181,11 @@ int login()
     {
         if (send_data(buffer, len) != -1)
         {
-            int pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
-            unsigned char *recvpkt = malloc(pktsz);
+            size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+            unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
             if (recvpkt)
             {
-                if (recv_data(recvpkt, sizeof(recvpkt)) <= 0)
+                if (recv_data(recvpkt, pktsz) <= 0)
                 {
                     fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
                 }
@@ -238,10 +238,10 @@ void join()
         if (send_data(buffer, len) != -1)
         {
             int pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
-            unsigned char *recvpkt = malloc(pktsz);
+            unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
             if (recvpkt)
             {
-                if (recv_data(recvpkt, sizeof(recvpkt)) <= 0)
+                if (recv_data(recvpkt, pktsz) <= 0)
                 {
                     fprintf(stdout, "join failed \n");
                 }

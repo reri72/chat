@@ -398,8 +398,7 @@ int user_login_res(SSL *ssl, unsigned char *packet)
     login_user_process(packet, &qres);
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
-
-    nano_sleep(2,0);
+    
     ret = send_data(ssl, buffer, totlen);
 
     FREE(buffer);

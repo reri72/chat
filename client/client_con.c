@@ -171,8 +171,7 @@ int recv_data(unsigned char *buffer, int bufsize)
         fprintf(stderr, "SSL_read failed (%s)\n", ERR_reason_error_string(err));
         return -1;
     }
-
-    buffer[bytes] = '\0';
+    
     return bytes;
 }
 
