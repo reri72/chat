@@ -3,8 +3,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "readconf.h"
-#include "myutils.h"
+#include "sockC.h"
 
 MYSQL *conn = NULL;
 char serverip[IP_LEN] = {0,};
@@ -26,7 +25,7 @@ void fill_server_conf_value()
 
     if (validate_config_file(confpath) == 0)
     {
-        fprintf(stderr, "Not exist server.conf\n");
+        LOG_ERR("Not exist server.conf\n");
         exit(1);
     }
 
@@ -52,7 +51,7 @@ void fill_server_conf_value()
 
     if (key_path == NULL || cert_path == NULL)
     {
-        fprintf(stderr, "Not exist cert or key file\n");
+        LOG_ERR("Not exist cert or key file\n");
         exit(1);
     }
 
@@ -66,7 +65,7 @@ void fill_server_conf_value()
 
     if (dbid == NULL || dbpasswd == NULL)
     {
-        fprintf(stderr, "Not exist database connecting info \n");
+        LOG_ERR("Not exist database connecting info \n");
         exit(1);
     }
 
@@ -92,7 +91,7 @@ void server_db_configure()
     const char *db_query = "CREATE DATABASE IF NOT EXISTS CHAT";
     if (mysql_query(conn, db_query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_ERR("query failed: %s\n", mysql_error(conn));
         mysql_close(conn);
         exit(1);
     }
@@ -100,7 +99,7 @@ void server_db_configure()
     const char *db_use_query = "USE CHAT";
     if (mysql_query(conn, db_use_query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_ERR("query failed: %s\n", mysql_error(conn));
         mysql_close(conn);
         exit(1);
     }
@@ -112,7 +111,7 @@ void server_db_configure()
                                      "LAST_LOGIN_TIME TIMESTAMP NULL DEFAULT NULL)";
     if (mysql_query(conn, db_client_query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_ERR("query failed: %s\n", mysql_error(conn));
         mysql_close(conn);
         exit(1);
     }

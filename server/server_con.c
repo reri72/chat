@@ -52,7 +52,7 @@ int chat_server_init()
     server_sock = create_sock(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0)
     {
-        fprintf(stderr, "create_sock() failed \n");
+        LOG_ERR("create_sock() failed \n");
         return chat_server_end();
     }
 
@@ -61,7 +61,7 @@ int chat_server_init()
 
     if (sock_set_nonblocking(server_sock) != SUCCESS)
     {
-        fprintf(stderr, "sock_set_nonblocking");
+        LOG_ERR("sock_set_nonblocking");
         return chat_server_end();
     }
 
@@ -93,13 +93,13 @@ void close_client_peer(client_t *client)
             int err = SSL_get_error(ssl, ret);
             
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-                fprintf(stderr, "SSL_shutdown needs retry \n");
+                LOG_WARN("SSL_shutdown needs retry \n");
             else if (err == SSL_ERROR_SYSCALL)
-                fprintf(stderr, "SSL_shutdown syscall error \n");
+                LOG_WARN("SSL_shutdown syscall error \n");
             else if (err == SSL_ERROR_SSL)
-                fprintf(stderr, "SSL_shutdown protocol error \n");
+                LOG_WARN("SSL_shutdown protocol error \n");
             else
-                fprintf(stderr, "SSL_shutdown failed with error %d \n", err);
+                LOG_WARN("SSL_shutdown failed with error %d \n", err);
         }
         SSL_free(ssl);
     }
@@ -184,7 +184,7 @@ int send_data(SSL *ssl, unsigned char *data, size_t len)
                 continue;
             }
 
-            fprintf(stderr, "SSL_write failed: %s\n", ERR_reason_error_string(err));
+            LOG_ERR("SSL_write failed: %s\n", ERR_reason_error_string(err));
             return -1;
         }
         sent += ret;
@@ -204,7 +204,7 @@ void *thread_accept_client(void* arg)
     int ret = tcp_server_process(server_sock, serverport, serverip);
     if (ret != SUCCESS)
     {
-        fprintf(stderr, "tcp_server_process() failed \n");
+        LOG_ERR("tcp_server_process() failed \n");
         return NULL;
     }
 
@@ -241,13 +241,13 @@ void *thread_accept_client(void* arg)
             if (ssl == NULL)
             {
                 close_sock(&client_sock);
-                fprintf(stderr, "SSL_new failed \n");
+                LOG_ERR("SSL_new failed \n");
                 continue;
             }
 
             if (SSL_set_fd(ssl, client_sock) == 0)
             {
-                fprintf(stderr, "SSL_set_fd failed \n");
+                LOG_ERR("SSL_set_fd failed \n");
                 SSL_free(ssl); ssl = NULL;
                 close_sock(&client_sock);
                 continue;
@@ -267,7 +267,7 @@ void *thread_accept_client(void* arg)
             client_t *client = (client_t *)calloc(1, sizeof(client_t));
             if (client == NULL)
             {
-                fprintf(stderr, "calloc failed \n");
+                LOG_ERR("calloc failed \n");
                 close_sock(&client_sock);
             }
 
@@ -277,7 +277,7 @@ void *thread_accept_client(void* arg)
             client->port = ntohs(addr.sin_port);
             client->ssl = ssl;
             
-            printf("new connection(%d) from %s(%u):%u \n", 
+            LOG_INFO("new connection(%d) from %s(%u):%u \n", 
                         client->sockfd, client->ip, client->ipaddr, client->port);
 
             if (pthread_create(&thread, NULL, thread_server_communication, (void*)client) == 0)
@@ -319,13 +319,13 @@ void *thread_server_communication(void* arg)
             case PROTO_CREATE_USER:
                 {
                     if (join_con_res(ssl, packet))
-                        fprintf(stdout, "join response success \n");
+                        LOG_DEBUG("join response success \n");
                 } break;
 
             case PROTO_LOGIN_USER:
                 {
                     if (user_login_res(ssl, packet))
-                        fprintf(stdout, "login response success \n");
+                        LOG_DEBUG("login response success \n");
                 } break;
 
             default:
@@ -333,7 +333,7 @@ void *thread_server_communication(void* arg)
         }
     }
     
-    printf("exit client : %s \n ", client->ip);
+    LOG_DEBUG("close client : %s \n ", client->ip);
     close_client_peer(client);
     
     return NULL;

@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "client_con.h"
 #include "menu.h"
 
 #include "common.h"
-#include "socks.h"
-#include "sslUtils.h"
+#include "sockC.h"
 
 volatile sig_atomic_t exit_flag = 0;
 char username[MAX_ID_LENGTH] = {0,};
@@ -19,12 +19,20 @@ void sighandle(int signum, siginfo_t *info, void *context);
 
 int main(int argc, char **argv)
 {
+    char pwd[MAX_LOG_FULLPATH_SIZE] = {0,};
+
     struct sigaction sa_pipe;
     struct sigaction sa;
 
     memset(&sa_pipe, 0, sizeof(sa_pipe));
     memset(&sa, 0, sizeof(sa));
     
+    if (getcwd(pwd, sizeof(pwd)) == NULL)
+    {
+        perror("getcwd() error!!");
+        exit(0);
+    }
+
     sa.sa_sigaction = sighandle;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_SIGINFO;
@@ -37,6 +45,9 @@ int main(int argc, char **argv)
     sigaction(SIGILL, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+
+    init_log(LOG_DEBUG, 4096);
+    create_logfile(pwd,"/log/chat_client.log");
 
     fill_client_conf_value();
 
@@ -76,7 +87,7 @@ int main(int argc, char **argv)
             case HOME_EXIT2:
             default:
             {
-                printf("bye \n");
+                LOG_DEBUG("bye \n");
                 goto ENTRY;
             }
         }
@@ -85,6 +96,7 @@ int main(int argc, char **argv)
 ENTRY:
 
     chat_client_end();
+    destroy_log();
 
     return 0;
 }
@@ -92,18 +104,22 @@ ENTRY:
 void sighandle(int signum, siginfo_t *info, void *context)
 {
     fprintf(stderr, "Interrupt!! (%d) \n", signum);
+    LOG_ERR("Interrupt!! (%d)\n", signum);
 
     if (info)
     {
         fprintf(stderr, "signal sent by pid: %d\n", info->si_pid);
         fprintf(stderr, "signal code: %d\n", info->si_code);
+
+        LOG_ERR("signal sent by pid: %d\n", info->si_pid);
+        LOG_ERR("signal code: %d\n", info->si_code);
     }
 
     exit_flag = 1;
+    chat_client_end();
+    destroy_log();
 
     nano_sleep(1,0);
-    
-    chat_client_end();
 
     exit(0);
 }

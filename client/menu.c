@@ -175,7 +175,8 @@ int login()
     buffer = login_req(id, password, &len);
     if (buffer == NULL)
     {
-        fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+        LOG_DEBUG("login failed (user : %s) \n", id);
+        printf("login failed (user : %s) \n", id);
     }
     else
     {
@@ -187,7 +188,8 @@ int login()
             {
                 if (recv_data(recvpkt, pktsz) <= 0)
                 {
-                    fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+                    LOG_DEBUG("login failed (user : %s) \n", id);
+                    printf("login failed (user : %s) \n", id);
                 }
                 else
                 {
@@ -200,14 +202,18 @@ int login()
             }
             else
             {
-                fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+                LOG_DEBUG("login failed (user : %s) \n", id);
+                printf("login failed (user : %s) \n", id);
             }
         }
         else
         {
-            fprintf(stdout, "[%s:%d] login failed \n", __FUNCTION__, __LINE__);
+            LOG_DEBUG("login failed (user : %s) \n", id);
+            printf("login failed (user : %s) \n", id);
         }
     }
+
+    nano_sleep(3,0);
 
     FREE(buffer);
 
@@ -231,7 +237,8 @@ void join()
     buffer = join_req(id, password, &len);
     if (buffer == NULL)
     {
-        fprintf(stdout, "join failed \n");
+        LOG_INFO("join failed (user : %s)\n", id);
+        printf("join failed (user : %s)\n", id);
     }
     else
     {
@@ -243,7 +250,8 @@ void join()
             {
                 if (recv_data(recvpkt, pktsz) <= 0)
                 {
-                    fprintf(stdout, "join failed \n");
+                    LOG_INFO("join failed (user : %s)\n", id);
+                    printf("join failed (user : %s)\n", id);
                 }
                 else
                 {
@@ -253,15 +261,19 @@ void join()
             }
             else
             {
-                fprintf(stdout, "join failed \n");
+                LOG_INFO("join failed (user : %s)\n", id);
+                printf("join failed (user : %s)\n", id);
             }
         }
         else
         {
-            fprintf(stdout, "join failed \n");
+            LOG_INFO("join failed (user : %s)\n", id);
+            printf("join failed (user : %s)\n", id);
         }
     }
 
+    nano_sleep(3,0);
+    
     FREE(buffer);
 }
 

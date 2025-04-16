@@ -30,33 +30,33 @@ int chat_client_init()
     ctx = create_ctx(0);
     if (ctx == NULL)
     {
-        fprintf(stderr, "create_ctx failed \n");
+        LOG_ERR("create_ctx failed \n");
         return -1;
     }
 
     ssl = SSL_new(ctx);
     if (ssl == NULL)
     {
-        fprintf(stderr, "SSL_new() failed \n");
+        LOG_ERR("SSL_new() failed \n");
         return chat_client_end();
     }
 
     client_sock = create_sock(AF_INET, SOCK_STREAM, 0);
     if (client_sock < 0)
     {
-        fprintf(stderr, "create_sock() failed \n");
+        LOG_ERR("create_sock() failed \n");
         return chat_client_end();
     }
 
     if ( tcp_client_process(client_sock, serverport, serverip) != 0 )
     {
-        fprintf(stderr, "tcp_client_process() failed \n");
+        LOG_ERR("tcp_client_process() failed \n");
         return chat_client_end();
     }
 
     if (SSL_set_fd(ssl, client_sock) == 0)
     {
-        fprintf(stderr, "SSL_set_fd() failed \n");
+        LOG_ERR("SSL_set_fd() failed \n");
         return chat_client_end();
     }
 
@@ -68,7 +68,7 @@ int chat_client_init()
 
     if (sock_set_nonblocking(client_sock) != SUCCESS)
     {
-        fprintf(stderr, "sock_set_nonblocking");
+        LOG_ERR("sock_set_nonblocking");
         return chat_client_end();
     }
 
@@ -89,19 +89,19 @@ int chat_client_end()
             {
                 int err = SSL_get_error(ssl, ret);
                 if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-                    fprintf(stderr, "SSL shutdown needs retry\n");
+                    LOG_WARN("SSL shutdown needs retry\n");
                 else if (err == SSL_ERROR_SYSCALL)
-                    fprintf(stderr, "SSL shutdown syscall error: socket closed early\n");
+                    LOG_WARN("SSL shutdown syscall error: socket closed early\n");
                 else if (err == SSL_ERROR_SSL)
-                    fprintf(stderr, "SSL shutdown protocol error\n");
+                    LOG_WARN("SSL shutdown protocol error\n");
                 else
-                    fprintf(stderr, "SSL shutdown failed with error %d\n", err);
+                    LOG_WARN("SSL shutdown failed with error %d\n", err);
             }
         }
         else if (ret < 0)
         {
             int err = SSL_get_error(ssl, ret);
-            fprintf(stderr, "SSL_shutdown() failed: %d\n", err);
+            LOG_ERR("SSL_shutdown() failed: %d\n", err);
         }
     }
 
@@ -142,7 +142,7 @@ int send_data(unsigned char *buffer, int len)
                 continue;
             }
 
-            fprintf(stderr, "SSL_write failed: %s\n", ERR_reason_error_string(err));
+            LOG_ERR("SSL_write failed: %s\n", ERR_reason_error_string(err));
             exit_flag = 1;
             return -1;
         }
@@ -249,9 +249,9 @@ void parse_join_res(unsigned char *packet)
     memcpy(&qres, p, sizeof(qres));
 
     if (qres == SUCCESS)
-        fprintf(stdout, "join success \n");
+        LOG_DEBUG("join success \n");
     else
-        fprintf(stdout, "join failed \n");
+        LOG_DEBUG("join failed \n");
 }
 
 unsigned char *login_req(const char *id, const char *passwd, int *buflen)
@@ -300,12 +300,10 @@ int parse_login_res(unsigned char *packet)
 
     memcpy(&res, ptr, sizeof(int8_t));
 
-    fprintf(stdout, "res : %d \n", res);
-
     if (res == SUCCESS)
-        fprintf(stdout, "login success \n");
+        LOG_DEBUG("login success \n");
     else
-        fprintf(stdout, "login failed \n");
+        LOG_DEBUG("login failed \n");
     
     return res;
 }

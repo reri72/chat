@@ -22,7 +22,7 @@ int join_user(const char *id, const char *passwd)
     base64passwd = BASE64_encode(enc_passwd, (EVP_MAX_MD_SIZE/2));
     if (base64passwd == NULL)
     {
-        fprintf(stderr, "password encode failed. \n");
+        LOG_WARN("password encode failed. \n");
         return -1;
     }
     
@@ -32,7 +32,7 @@ int join_user(const char *id, const char *passwd)
         
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_WARN("query failed: %s\n", mysql_error(conn));
         free(base64passwd);
         return -1;
     }
@@ -40,7 +40,7 @@ int join_user(const char *id, const char *passwd)
     result = mysql_store_result(conn);
     if (result == NULL)
     {
-        fprintf(stderr, "mysql_store_result() failed: %s\n", mysql_error(conn));
+        LOG_WARN("mysql_store_result() failed: %s\n", mysql_error(conn));
         free(base64passwd);
         return -1;
     }
@@ -48,7 +48,7 @@ int join_user(const char *id, const char *passwd)
     row = mysql_fetch_row(result);
     if (row)
     {
-        fprintf(stdout, "already exist user : %s \n", id);
+        LOG_WARN("already exist user : %s \n", id);
         free(base64passwd);
         mysql_free_result(result);
         return -1;
@@ -63,7 +63,7 @@ int join_user(const char *id, const char *passwd)
 
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_WARN("query failed: %s\n", mysql_error(conn));
         free(base64passwd);
         return -1;
     }
@@ -91,7 +91,7 @@ int login_user(const char *id, const char *passwd)
     base64passwd = BASE64_encode(enc_passwd, (EVP_MAX_MD_SIZE/2));
     if (base64passwd == NULL)
     {
-        fprintf(stderr, "password encode failed. \n");
+        LOG_WARN("password encode failed. \n");
         return ret;
     }
     
@@ -101,7 +101,7 @@ int login_user(const char *id, const char *passwd)
         
     if (mysql_query(conn, query))
     {
-        fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+        LOG_WARN("query failed: %s\n", mysql_error(conn));
         free(base64passwd);
         return ret;
     }
@@ -109,7 +109,7 @@ int login_user(const char *id, const char *passwd)
     result = mysql_store_result(conn);
     if (result == NULL)
     {
-        fprintf(stderr, "mysql_store_result() failed: %s\n", mysql_error(conn));
+        LOG_WARN("mysql_store_result() failed: %s\n", mysql_error(conn));
         free(base64passwd);
         return ret;
     }
@@ -117,7 +117,7 @@ int login_user(const char *id, const char *passwd)
     row = mysql_fetch_row(result);
     if (!row)
     {
-        fprintf(stdout, "not exist user : %s \n", id);
+        LOG_WARN("not exist user : %s \n", id);
         free(base64passwd);
         mysql_free_result(result);
         return ret;
@@ -133,7 +133,7 @@ int login_user(const char *id, const char *passwd)
             "WHERE USERNAME = '%s' ", id);
         if (mysql_query(conn, query))
         {
-            fprintf(stderr, "query failed: %s\n", mysql_error(conn));
+            LOG_WARN("query failed: %s\n", mysql_error(conn));
             ret = FAILED;
         }        
     }

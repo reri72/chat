@@ -20,11 +20,19 @@ void sighandle(int signum, siginfo_t *info, void *context);
 
 int main(int argc, char **argv)
 {
+    char pwd[MAX_LOG_FULLPATH_SIZE] = {0,};
+
     struct sigaction sa;
     struct sigaction sa_pipe;
 
     memset(&sa, 0, sizeof(sa));
     memset(&sa_pipe, 0, sizeof(sa_pipe));
+
+    if (getcwd(pwd, sizeof(pwd)) == NULL)
+    {
+        perror("getcwd() error!!");
+        exit(0);
+    }
 
     sa.sa_sigaction = sighandle;
     sigemptyset(&sa.sa_mask);
@@ -48,6 +56,9 @@ int main(int argc, char **argv)
         exit(1);
     }
     
+    init_log(LOG_DEBUG, 4096);
+    create_logfile(pwd,"/log/chat_server.log");
+
     pthread_t threads[THREAD_POOL_SIZE] = {0,};
     void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, };
     
@@ -55,17 +66,17 @@ int main(int argc, char **argv)
     for (i = 0; i < THREAD_COUNT; i++)
     {
         if (pthread_create(&threads[i], NULL, functions[i], NULL) != 0)
-            perror("Failed to create thread");
+            LOG_ERR("Failed to create thread");
     }
 
     for (i = 0; i < THREAD_COUNT; i++)
     {
         if (pthread_join(threads[i], NULL) != 0)
-            perror("Failed to join thread");
+            LOG_ERR("Failed to join thread");
     }
 
     chat_server_end();
-    
+    destroy_log();
     mysql_close(conn);
     mysql_library_end();
 
@@ -75,14 +86,18 @@ int main(int argc, char **argv)
 void sighandle(int signum, siginfo_t *info, void *context)
 {
     fprintf(stderr, "Interrupt!! (%d)\n", signum);
+    LOG_ERR("Interrupt!! (%d)\n", signum);
 
     if (info)
     {
         fprintf(stderr, "signal sent by pid: %d\n", info->si_pid);
         fprintf(stderr, "signal code: %d\n", info->si_code);
+
+        LOG_ERR("signal sent by pid: %d\n", info->si_pid);
+        LOG_ERR("signal code: %d\n", info->si_code);
     }
     
-    // cleanup client pool
+    destroy_log();
 
     exit_flag = 1;
 }
