@@ -98,6 +98,8 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
         {
             printf("invaild password length (%d/%d) \n", i, MAX_PASSWORD_LENGTH);
             memset(password_buffer, 0, buffer_size);
+            echo_off_terminal();
+            i = 0;
             continue;
         }
 
@@ -173,12 +175,7 @@ int login()
     get_password("PASSWORD : ", password, sizeof(password));
 
     buffer = login_req(id, password, &len);
-    if (buffer == NULL)
-    {
-        LOG_DEBUG("login failed (user : %s) \n", id);
-        printf("login failed (user : %s) \n", id);
-    }
-    else
+    if (buffer)
     {
         if (send_data(buffer, len) != -1)
         {
@@ -186,34 +183,25 @@ int login()
             unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
             if (recvpkt)
             {
-                if (recv_data(recvpkt, pktsz) <= 0)
+                if (recv_data(recvpkt, pktsz))
                 {
-                    LOG_DEBUG("login failed (user : %s) \n", id);
-                    printf("login failed (user : %s) \n", id);
-                }
-                else
-                {
-                    if ( (ret = parse_login_res(recvpkt)) == 0 )
+                    if ( (ret = parse_login_res(recvpkt)) == SUCCESS )
                     {
+                        LOG_DEBUG("login success \n");
                         memcpy(username, id, strlen(id));
                     }
                 }
                 FREE(recvpkt);
             }
-            else
-            {
-                LOG_DEBUG("login failed (user : %s) \n", id);
-                printf("login failed (user : %s) \n", id);
-            }
-        }
-        else
-        {
-            LOG_DEBUG("login failed (user : %s) \n", id);
-            printf("login failed (user : %s) \n", id);
         }
     }
-
-    nano_sleep(3,0);
+    
+    if (ret == FAILED)
+    {
+        LOG_DEBUG("login failed (user : %s) \n", id);
+        printf("login failed (user : %s) \n", id);
+        nano_sleep(3,0);
+    }
 
     FREE(buffer);
 
@@ -226,21 +214,15 @@ void join()
     char password[MAX_PASSWORD_LENGTH] = {0,};
     unsigned char *buffer = NULL;
     int len = 0;
+    int ret = FAILED;
 
     system("/usr/bin/clear");
 
-    puts("============================");
     get_id("NEW ID : ", id, sizeof(id));
     get_password("PASSWORD : ", password, sizeof(password));
-    puts("============================");
 
     buffer = join_req(id, password, &len);
-    if (buffer == NULL)
-    {
-        LOG_INFO("join failed (user : %s)\n", id);
-        printf("join failed (user : %s)\n", id);
-    }
-    else
+    if (buffer)
     {
         if (send_data(buffer, len) != -1)
         {
@@ -248,28 +230,24 @@ void join()
             unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
             if (recvpkt)
             {
-                if (recv_data(recvpkt, pktsz) <= 0)
+                if (recv_data(recvpkt, pktsz))
                 {
-                    LOG_INFO("join failed (user : %s)\n", id);
-                    printf("join failed (user : %s)\n", id);
-                }
-                else
-                {
-                    parse_join_res(recvpkt);
+                    ret = parse_join_res(recvpkt);
                 }
                 FREE(recvpkt);
             }
-            else
-            {
-                LOG_INFO("join failed (user : %s)\n", id);
-                printf("join failed (user : %s)\n", id);
-            }
         }
-        else
-        {
-            LOG_INFO("join failed (user : %s)\n", id);
-            printf("join failed (user : %s)\n", id);
-        }
+    }
+
+    if (ret == SUCCESS)
+    {
+        LOG_INFO("join success (user : %s)\n", id);
+        printf("join success (user : %s)\n", id);
+    }
+    else
+    {
+        LOG_INFO("join failed (user : %s)\n", id);
+        printf("join failed (user : %s)\n", id);
     }
 
     nano_sleep(3,0);

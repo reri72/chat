@@ -239,7 +239,7 @@ unsigned char *join_req(const char *id, const char *passwd, int *buflen)
     return buffer;
 }
 
-void parse_join_res(unsigned char *packet)
+int parse_join_res(unsigned char *packet)
 {
     unsigned char *p = packet;
     int8_t qres = FAILED;
@@ -248,10 +248,7 @@ void parse_join_res(unsigned char *packet)
 
     memcpy(&qres, p, sizeof(qres));
 
-    if (qres == SUCCESS)
-        LOG_DEBUG("join success \n");
-    else
-        LOG_DEBUG("join failed \n");
+    return qres;
 }
 
 unsigned char *login_req(const char *id, const char *passwd, int *buflen)
@@ -299,11 +296,6 @@ int parse_login_res(unsigned char *packet)
     ptr += sizeof(proto_hdr_t);
 
     memcpy(&res, ptr, sizeof(int8_t));
-
-    if (res == SUCCESS)
-        LOG_DEBUG("login success \n");
-    else
-        LOG_DEBUG("login failed \n");
     
     return res;
 }
