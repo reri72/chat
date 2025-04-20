@@ -5,11 +5,9 @@
 #include <signal.h>
 #include <netinet/in.h>
 
-#include "socks.h"
-
 #include "common.h"
 
-#include "sockC.h"
+#include "reriutils.h"
 #include "client_con.h"
 
 SSL_CTX *ctx = NULL;

@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
-#include "sockC.h"
+#include "reriutils.h"
 
 MYSQL *conn = NULL;
 char serverip[IP_LEN] = {0,};
@@ -12,6 +13,7 @@ char certpath[CERT_PATH_LEN] = {0,};
 char keypath[KEY_PATH_LEN] = {0,};
 char db_id[32] = {0,};
 char db_passwd[64] = {0,};
+_logset _loglevel = LOG_DEBUG;
 
 int server_sock = -1;
 
@@ -35,6 +37,7 @@ void fill_server_conf_value()
     char *key_path = (char *)get_config_value(confpath, "key_path", TYPE_STRING);
     char *dbid = (char *)get_config_value(confpath, "db_id", TYPE_STRING);
     char *dbpasswd = (char *)get_config_value(confpath, "db_passwd", TYPE_STRING);
+    _logset *log_level = (_logset *)get_config_value(confpath, "loglevel", TYPE_INT);
 
     if (server_ip)
     {
@@ -47,6 +50,13 @@ void fill_server_conf_value()
     {
         serverport = *server_port;
         FREE(server_port);
+    }
+
+    if (log_level)
+    {
+        _loglevel = *log_level;
+        change_log_level(_loglevel);
+        FREE(log_level);
     }
 
     if (key_path == NULL || cert_path == NULL)

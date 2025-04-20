@@ -8,7 +8,7 @@
 #include "menu.h"
 
 #include "common.h"
-#include "sockC.h"
+#include "reriutils.h"
 
 volatile sig_atomic_t exit_flag = 0;
 char username[MAX_ID_LENGTH] = {0,};

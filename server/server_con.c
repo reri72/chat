@@ -7,11 +7,9 @@
 #include <signal.h>
 #include <pthread.h>
 
-#include "socks.h"
-
 #include "common.h"
 
-#include "sockC.h"
+#include "reriutils.h"
 #include "server_con.h"
 #include "server_sql.h"
 

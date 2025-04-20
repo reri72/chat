@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "server_sql.h"
-#include "sockC.h"
+#include "reriutils.h"
 
 extern MYSQL *conn;
 

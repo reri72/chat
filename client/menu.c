@@ -11,7 +11,7 @@
 #include "client_con.h"
 #include "menu.h"
 
-#include "sockC.h"
+#include "reriutils.h"
 
 extern volatile sig_atomic_t exit_flag;
 extern char username[MAX_ID_LENGTH];

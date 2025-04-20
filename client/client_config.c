@@ -3,11 +3,12 @@
 #include <string.h>
 
 #include "common.h"
-#include "readconf.h"
+#include "reriutils.h"
 
 char clientip[IP_LEN] = {0,};
 char serverip[IP_LEN] = {0,};
 unsigned short serverport = DEFAULT_SERVER_PORT;
+_logset _loglevel = 2;
 
 void fill_client_conf_value()
 {
@@ -26,6 +27,7 @@ void fill_client_conf_value()
     char *client_ip = (char *)get_config_value(confpath, "client_ip", TYPE_STRING);
     char *server_ip = (char *)get_config_value(confpath, "server_ip", TYPE_STRING);
     unsigned short *server_port = (unsigned short *)get_config_value(confpath, "server_port", TYPE_INT);
+    _logset *log_level = (_logset *)get_config_value(confpath, "loglevel", TYPE_INT);
 
     if (client_ip)
     {
@@ -43,5 +45,12 @@ void fill_client_conf_value()
     {
         serverport = *server_port;
         FREE(server_port);
+    }
+
+    if (log_level)
+    {
+        _loglevel = *log_level;
+        change_log_level(_loglevel);
+        FREE(log_level);
     }
 }
