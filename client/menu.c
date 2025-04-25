@@ -112,10 +112,9 @@ int home(int loginok)
     char home_choice[7][8] = {"", "login", "join", "exit", "logout", "chat", "exit"};
     int ret = 0;
 
-    system("/usr/bin/clear");
-    
     while (1)
     {
+        system("/usr/bin/clear");
         puts("======== HELLO CHAT ========");
         if (loginok == SUCCESS)
         {
@@ -151,9 +150,36 @@ int home(int loginok)
             printf("Invalid menu (%d)\n", ret);
         }
         nano_sleep(1, 0);
-
-        system("/usr/bin/clear");
         ret = 0;
+    }
+
+    return ret;
+}
+
+int chat()
+{
+    char chat_choice[5][16] = {"", "create 1:1 room", "create room", "join room", "exit"};
+    int ret = 0;
+
+    while (1)
+    {
+        system("/usr/bin/clear");
+        puts("======== CHOICE MENU ========");
+        printf("* %s \n", username);
+        printf("1. %s \n", chat_choice[1]);
+        printf("2. %s \n", chat_choice[2]);
+        printf("3. %s \n", chat_choice[3]);
+        printf("4. %s \n", chat_choice[4]);
+        puts("============================");
+        puts("your choice > ");
+
+        scanf("%d", &ret);
+        while (getchar() != '\n');
+        if (ret > 0 && ret < 5)
+            break;
+
+        printf("Invalid menu (%d)\n", ret);
+        nano_sleep(1, 0);
     }
 
     return ret;
@@ -258,9 +284,4 @@ void join()
 void logout()
 {
     memset(&username, 0, sizeof(username));
-}
-
-void chat()
-{
-
 }

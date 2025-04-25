@@ -12,10 +12,10 @@ typedef enum
 } HOME_ENUM;
 
 int home(int loginok);
+int chat();
 int login();
 void join();
 
 void logout();
-void chat();
 
 #endif

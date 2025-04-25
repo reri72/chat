@@ -81,7 +81,15 @@ int main(int argc, char **argv)
             }
             case HOME_CHAT:
             {
-                
+                ret = chat();
+                if (ret == 1)
+                    goto ENTRY;
+                else if (ret == 2)
+                    goto ENTRY;
+                else if (ret == 3)
+                    goto ENTRY;
+                else
+                    goto ENTRY;
             }
             case HOME_EXIT1:
             case HOME_EXIT2:
