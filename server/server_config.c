@@ -119,7 +119,22 @@ void server_db_configure()
                                      "USERNAME VARCHAR(20) NOT NULL, "
                                      "PASSWORD VARCHAR(44) NOT NULL, "
                                      "LAST_LOGIN_TIME TIMESTAMP NULL DEFAULT NULL)";
+
     if (mysql_query(conn, db_client_query))
+    {
+        LOG_ERR("query failed: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        exit(1);
+    }
+
+    const char *db_chatroom_query =  "CREATE TABLE IF NOT EXISTS CHAT_ROOM ("
+                                        "ID INT AUTO_INCREMENT PRIMARY KEY, "
+                                        "ROOMTYPE INT NOT NULL, "
+                                        "TITLE VARCHAR(100) NOT NULL, "
+                                        "OWNER VARCHAR(20) NOT NULL, "
+                                        "CREATE_DATE TIMESTAMP NOT NULL)";
+
+    if (mysql_query(conn, db_chatroom_query))
     {
         LOG_ERR("query failed: %s\n", mysql_error(conn));
         mysql_close(conn);

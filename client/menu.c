@@ -34,23 +34,23 @@ void echo_on_terminal()
     tcsetattr(STDIN_FILENO, TCSANOW, &old_setting);
 }
 
-void get_id(char *prompt, char *input_buffer, int buffer_size)
+void get_id(char *prompt, char *input_buffer, int max_size)
 {
     int len = 0;
     while (exit_flag == 0)
     {
         printf("%s", prompt);
-        fgets(input_buffer, buffer_size, stdin);
+        fgets(input_buffer, max_size, stdin);
         
         //fgets 로 문자열을 받으면 끝에 \n 가 생기므로 제거해줌
         input_buffer[strcspn(input_buffer, "\n")] = 0;
 
         len = strlen(input_buffer);
 
-        if (len < 3 || len > buffer_size)
+        if (len < 3 || len > max_size)
         {
-            printf("invaild id length (%d/%d)\n", len, buffer_size);
-            memset(input_buffer, 0, buffer_size);
+            printf("invaild id length (%d/%d)\n", len, max_size);
+            memset(input_buffer, 0, max_size);
             continue;
         }
         
@@ -58,7 +58,7 @@ void get_id(char *prompt, char *input_buffer, int buffer_size)
     }
 }
 
-void get_password(char *prompt, char *password_buffer, int buffer_size)
+void get_password(char *prompt, char *password_buffer, int max_size)
 {
     char ch;
     int i = 0;
@@ -68,7 +68,7 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
     while (exit_flag == 0)
     {
         printf("%s", prompt);
-        while (i < buffer_size - 1)
+        while (i < max_size - 1)
         {
             ch = getchar();
             if (ch == '\n')  // Enter
@@ -97,12 +97,35 @@ void get_password(char *prompt, char *password_buffer, int buffer_size)
         if (i < 5 || i > MAX_PASSWORD_LENGTH)
         {
             printf("invaild password length (%d/%d) \n", i, MAX_PASSWORD_LENGTH);
-            memset(password_buffer, 0, buffer_size);
+            memset(password_buffer, 0, max_size);
             echo_off_terminal();
             i = 0;
             continue;
         }
 
+        break;
+    }
+}
+
+void get_roomtitle(char *title_buffer, int buffer_size)
+{
+    int len = 0;
+    while (exit_flag == 0)
+    {
+        printf("ROOM TITLE : ");
+        fgets(title_buffer, buffer_size, stdin);
+        
+        title_buffer[strcspn(title_buffer, "\n")] = 0;
+
+        len = strlen(title_buffer);
+
+        if (len < 3 || len > buffer_size)
+        {
+            printf("invaild id length (%d/%d)\n", len, buffer_size);
+            memset(title_buffer, 0, buffer_size);
+            continue;
+        }
+        
         break;
     }
 }
@@ -185,12 +208,63 @@ int chat()
     return ret;
 }
 
+int createroom(int roomtype)
+{
+    int res = FAILED;
+    char title[MAX_ROOMTITLE_LENGTH] = {0,};
+
+    system("/usr/bin/clear");
+
+    get_roomtitle(title, sizeof(title));
+
+    char *pktbuf    = NULL;
+    int pktbuflen   = 0;
+
+    pktbuf = createroom_req(roomtype, title, username, &pktbuflen);
+    if (pktbuf)
+    {
+        if (send_data(pktbuf, pktbuflen) != -1)
+        {
+            size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+            char *recvpkt = (char *)malloc(pktsz);
+            if (recvpkt)
+            {
+                if (recv_data(recvpkt, pktsz))
+                {
+                    if ( (res = parse_createroom_res(recvpkt)) == SUCCESS )
+                    {
+                        LOG_DEBUG("create room success \n");
+                    }
+                }
+                FREE(recvpkt);
+            }
+        }
+    }
+    
+    if (res == FAILED)
+    {
+        LOG_DEBUG("create room failed (title : %s) \n", title);
+        printf("create room failed (title : %s) \n", title);
+        nano_sleep(3,0);
+    }
+
+    FREE(pktbuf);
+
+    return res;
+}
+
+int join_room()
+{
+    
+    return 0;
+}
+
 int login()
 {
     char id[MAX_ID_LENGTH]              = {0,};
     char password[MAX_PASSWORD_LENGTH]  = {0,};
     
-    unsigned char *buffer = NULL;
+    char *buffer = NULL;
     int len = 0;
 
     int ret = FAILED;
@@ -206,7 +280,7 @@ int login()
         if (send_data(buffer, len) != -1)
         {
             size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
-            unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
+            char *recvpkt = (char *)malloc(pktsz);
             if (recvpkt)
             {
                 if (recv_data(recvpkt, pktsz))
@@ -238,7 +312,7 @@ void join()
 {
     char id[MAX_ID_LENGTH] = {0,};
     char password[MAX_PASSWORD_LENGTH] = {0,};
-    unsigned char *buffer = NULL;
+    char *buffer = NULL;
     int len = 0;
     int ret = FAILED;
 
@@ -253,7 +327,7 @@ void join()
         if (send_data(buffer, len) != -1)
         {
             int pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
-            unsigned char *recvpkt = (unsigned char *)malloc(pktsz);
+            char *recvpkt = (char *)malloc(pktsz);
             if (recvpkt)
             {
                 if (recv_data(recvpkt, pktsz))

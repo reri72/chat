@@ -111,7 +111,7 @@ int chat_client_end()
     return -1;
 }
 
-int send_data(unsigned char *buffer, int len)
+int send_data(char *buffer, int len)
 {
     int sent = 0;
 
@@ -149,7 +149,7 @@ int send_data(unsigned char *buffer, int len)
     return sent;
 }
 
-int recv_data(unsigned char *buffer, int bufsize)
+int recv_data(char *buffer, int bufsize)
 {
     int bytes = 0;
     int timeout = 0;
@@ -200,10 +200,10 @@ int recv_data(unsigned char *buffer, int bufsize)
     return bytes;
 }
 
-unsigned char *join_req(const char *id, const char *passwd, int *buflen)
+char *join_req(const char *id, const char *passwd, int *buflen)
 {
-    unsigned char *buffer   = NULL;
-    unsigned char *p        = NULL;
+    char *buffer   = NULL;
+    char *p        = NULL;
 
     size_t totlen = 0;
     uint8_t len = 0;
@@ -217,7 +217,7 @@ unsigned char *join_req(const char *id, const char *passwd, int *buflen)
                 + sizeof(uint8_t) + strlen(id)
                 + sizeof(uint8_t) + strlen(passwd);
 
-    buffer = (unsigned char *)calloc(1, totlen);
+    buffer = (char *)calloc(1, totlen);
     if (buffer == NULL)
         return NULL;
 
@@ -237,9 +237,9 @@ unsigned char *join_req(const char *id, const char *passwd, int *buflen)
     return buffer;
 }
 
-int parse_join_res(unsigned char *packet)
+int parse_join_res(char *packet)
 {
-    unsigned char *p = packet;
+    char *p = packet;
     int8_t qres = FAILED;
 
     p += sizeof(proto_hdr_t);
@@ -249,10 +249,10 @@ int parse_join_res(unsigned char *packet)
     return qres;
 }
 
-unsigned char *login_req(const char *id, const char *passwd, int *buflen)
+char *login_req(const char *id, const char *passwd, int *buflen)
 {
-    unsigned char *buffer   = NULL;
-    unsigned char *p        = NULL;
+    char *buffer   = NULL;
+    char *p        = NULL;
 
     uint8_t len     = 0;
     size_t totlen   = 0;
@@ -266,7 +266,7 @@ unsigned char *login_req(const char *id, const char *passwd, int *buflen)
                 + sizeof(uint8_t) + strlen(id)
                 + sizeof(uint8_t) + strlen(passwd);
 
-    buffer = (unsigned char *)calloc(1, totlen);
+    buffer = (char *)calloc(1, totlen);
     if (buffer == NULL)
         return NULL;
 
@@ -286,9 +286,62 @@ unsigned char *login_req(const char *id, const char *passwd, int *buflen)
     return buffer;
 }
 
-int parse_login_res(unsigned char *packet)
+int parse_login_res(char *packet)
 {
-    unsigned char *ptr = packet;
+    char *ptr = packet;
+    int8_t res = FAILED;
+
+    ptr += sizeof(proto_hdr_t);
+
+    memcpy(&res, ptr, sizeof(int8_t));
+    
+    return res;
+}
+
+char* createroom_req(int type, char *title, char *username, int *buflen)
+{
+    proto_hdr_t hdr = {0,};
+
+    char *buffer = NULL;
+    char *curp = NULL;
+
+    uint8_t len = 0;
+    size_t totlen = 0;
+
+    hdr.proto = htons(PROTO_CREATE_ROOM);
+    hdr.flag = PROTO_REQ;
+
+    totlen = sizeof(hdr) + sizeof(int)
+                            + sizeof(uint8_t) + strlen(title)
+                            + sizeof(uint8_t) + strlen(username);
+    
+    buffer = (char *)malloc(totlen);
+    if (buffer == NULL)
+        return NULL;
+
+    *buflen = totlen;
+
+    curp = buffer;
+
+    WRITE_BUFF(curp, &hdr, sizeof(hdr));
+
+    type = htonl(type);
+    WRITE_BUFF(curp, &type, sizeof(int));
+
+    len = strlen(title);
+    WRITE_BUFF(curp, &len, sizeof(uint8_t));
+    WRITE_BUFF(curp, title, len);
+
+    len = strlen(username);
+    WRITE_BUFF(curp, &len, sizeof(uint8_t));
+    WRITE_BUFF(curp, username, len);
+
+    return buffer;
+}
+
+int parse_createroom_res(char *packet)
+{
+    char *ptr = packet;
     int8_t res = FAILED;
 
     ptr += sizeof(proto_hdr_t);

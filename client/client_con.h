@@ -4,13 +4,16 @@
 int chat_client_init();
 int chat_client_end();
 
-int send_data(unsigned char *buffer, int len);
-int recv_data(unsigned char *buffer, int bufsize);
+int send_data(char *buffer, int len);
+int recv_data(char *buffer, int bufsize);
 
-unsigned char *join_req(const char *id, const char *passwd, int *buflen);
-int parse_join_res(unsigned char *packet);
+char *join_req(const char *id, const char *passwd, int *buflen);
+int parse_join_res(char *packet);
 
-unsigned char *login_req(const char *id, const char *passwd, int *buflen);
-int parse_login_res(unsigned char *packet);
+char *login_req(const char *id, const char *passwd, int *buflen);
+int parse_login_res(char *packet);
+
+char* createroom_req(int type, char *title, char *username, int *buflen);
+int parse_createroom_res(char *packet);
 
 #endif

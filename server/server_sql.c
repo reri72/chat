@@ -144,3 +144,25 @@ int login_user(const char *id, const char *passwd)
     
     return ret;
 }
+
+int create_room(int type, const char *title, const char *id)
+{    
+    char    query[512]  = {0,};
+    int     ret         = FAILED;
+    
+    snprintf(query, sizeof(query), 
+                "INSERT INTO CHAT_ROOM(ROOMTYPE, TITLE, OWNER, CREATE_DATE) "
+                "VALUES(%d, '%s', '%s', now())", 
+                type, title, id);
+
+    if (mysql_query(conn, query))
+    {
+        LOG_WARN("query failed: %s\n", mysql_error(conn));
+    }
+    else
+    {
+        ret = SUCCESS;
+    }
+    
+    return ret;
+}

@@ -24,9 +24,14 @@
 
 #define MAX_ID_LENGTH 20
 #define MAX_PASSWORD_LENGTH 50
+#define MAX_ROOMTITLE_LENGTH 100
 
 #define PROTO_CREATE_USER       100
 #define PROTO_LOGIN_USER        101
+#define PROTO_CREATE_ROOM       102
+
+#define PRIVATE_ROOM            1
+#define GROUP_ROOM              2
 
 #define PROTO_REQ   0
 #define PROTO_RES   1
@@ -46,6 +51,6 @@ typedef struct client
     void *ssl;
 } client_t;
 
-void read_header(proto_hdr_t *hdr, unsigned char *buffer);
+void read_header(proto_hdr_t *hdr, char *buffer);
 
 #endif

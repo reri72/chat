@@ -13,6 +13,7 @@ typedef enum
 
 int home(int loginok);
 int chat();
+int createroom(int roomtype);
 int login();
 void join();
 

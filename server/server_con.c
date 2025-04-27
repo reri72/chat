@@ -15,16 +15,18 @@
 
 SSL_CTX *ctx = NULL;
 
-int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize);
-int send_data(SSL *ssl, unsigned char *data, size_t len);
+int receive_data(SSL *ssl, char *buffer, size_t bufsize);
+int send_data(SSL *ssl, char *data, size_t len);
 
 void close_client_peer(client_t *client);
 
 // ------------------------------------------------------------------
-int join_con_res(SSL *ssl, unsigned char *packet);
-void join_user_process(unsigned char *packet, int8_t *qres);
-int user_login_res(SSL *ssl, unsigned char *packet);
-void login_user_process(unsigned char *packet, int8_t *qres);
+int join_con_res(SSL *ssl, char *packet);
+void join_user_process(char *packet, int8_t *qres);
+int user_login_res(SSL *ssl, char *packet);
+void login_user_process(char *packet, int8_t *qres);
+int createroom_res(SSL *ssl, char *packet);
+void createroom_process(char *packet, int8_t *qres);
 // ------------------------------------------------------------------
 
 extern volatile sig_atomic_t exit_flag;
@@ -107,7 +109,7 @@ void close_client_peer(client_t *client)
     FREE(client);
 }
 
-int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
+int receive_data(SSL *ssl, char *buffer, size_t bufsize)
 {
     int bytes = 0;
 
@@ -154,7 +156,7 @@ int receive_data(SSL *ssl, unsigned char *buffer, size_t bufsize)
     return bytes;
 }
 
-int send_data(SSL *ssl, unsigned char *data, size_t len)
+int send_data(SSL *ssl, char *data, size_t len)
 {
     int sent = 0;
 
@@ -301,7 +303,7 @@ void *thread_server_communication(void* arg)
 {
     client_t *client = (client_t *)arg;
     SSL *ssl = client->ssl;
-    unsigned char packet[BUFFER_SIZE] = {0,};
+    char packet[BUFFER_SIZE] = {0,};
 
     while (exit_flag == 0)
     {
@@ -325,7 +327,11 @@ void *thread_server_communication(void* arg)
                     if (user_login_res(ssl, packet))
                         LOG_DEBUG("login response success \n");
                 } break;
-
+            case PROTO_CREATE_ROOM:
+                {
+                    if (createroom_res(ssl, packet))
+                        LOG_DEBUG("creat room response success \n");
+                } break;
             default:
                 break;
         }
@@ -339,10 +345,10 @@ void *thread_server_communication(void* arg)
 
 // -----------------------------------------------------------------------------
 
-int join_con_res(SSL *ssl, unsigned char *packet)
+int join_con_res(SSL *ssl, char *packet)
 {
     int ret = FAILED;
-    unsigned char *buffer = NULL, *pp = NULL;
+    char *buffer = NULL, *pp = NULL;
 
     size_t totlen = 0;
     int8_t qres = FAILED;
@@ -351,7 +357,7 @@ int join_con_res(SSL *ssl, unsigned char *packet)
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
     totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
-    buffer = (unsigned char *)malloc(totlen);
+    buffer = (char *)malloc(totlen);
     if (buffer == NULL)
         return -1;
 
@@ -373,9 +379,9 @@ int join_con_res(SSL *ssl, unsigned char *packet)
     return ret;
 }
 
-void join_user_process(unsigned char *packet, int8_t *qres)
+void join_user_process(char *packet, int8_t *qres)
 {
-    unsigned char *pp = packet;
+    char *pp = packet;
 
     char id[MAX_ID_LENGTH] = {0,};
     char passwd[MAX_PASSWORD_LENGTH] = {0,};
@@ -392,10 +398,10 @@ void join_user_process(unsigned char *packet, int8_t *qres)
     *qres = join_user(id, passwd);
 }
 
-int user_login_res(SSL *ssl, unsigned char *packet)
+int user_login_res(SSL *ssl, char *packet)
 {
     int ret = FAILED;
-    unsigned char *buffer = NULL, *pp = NULL;
+    char *buffer = NULL, *pp = NULL;
 
     size_t totlen = 0;
     int8_t qres = FAILED;
@@ -404,7 +410,7 @@ int user_login_res(SSL *ssl, unsigned char *packet)
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
     totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
-    buffer = (unsigned char *)malloc(totlen);
+    buffer = (char *)malloc(totlen);
     if (buffer == NULL)
         return -1;
 
@@ -426,9 +432,9 @@ int user_login_res(SSL *ssl, unsigned char *packet)
     return ret;
 }
 
-void login_user_process(unsigned char *packet, int8_t *qres)
+void login_user_process(char *packet, int8_t *qres)
 {
-    unsigned char *pp = packet;
+    char *pp = packet;
 
     char id[MAX_ID_LENGTH] = {0,};
     char passwd[MAX_PASSWORD_LENGTH] = {0,};
@@ -443,4 +449,61 @@ void login_user_process(unsigned char *packet, int8_t *qres)
     READ_BUFF(passwd, pp, len);
 
     *qres = login_user(id, passwd);
+}
+
+int createroom_res(SSL *ssl, char *packet)
+{
+    int ret = FAILED;
+    char *buffer = NULL, *pp = NULL;
+
+    size_t totlen = 0;
+    int8_t qres = FAILED;
+    proto_hdr_t hdr;
+
+    memset(&hdr, 0, sizeof(proto_hdr_t));
+
+    totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
+    buffer = (char *)malloc(totlen);
+    if (buffer == NULL)
+        return -1;
+
+    pp = buffer;
+
+    hdr.proto   = htons(PROTO_CREATE_ROOM);
+    hdr.flag    = PROTO_RES;
+
+    WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
+
+    createroom_process(packet, &qres);
+
+    WRITE_BUFF(pp, &qres, sizeof(qres));
+    
+    ret = send_data(ssl, buffer, totlen);
+
+    FREE(buffer);
+
+    return ret;
+}
+
+void createroom_process(char *packet, int8_t *qres)
+{
+    char *pp = packet;
+
+    int roomtype = PRIVATE_ROOM;
+    char title[MAX_ROOMTITLE_LENGTH]= {0,};
+    char id[MAX_ID_LENGTH]          = {0,};
+    uint8_t len = 0;
+
+    pp += sizeof(proto_hdr_t);
+
+    READ_BUFF(&roomtype, pp, sizeof(int));
+    roomtype = ntohl(roomtype);
+
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(title, pp, len);
+
+    READ_BUFF(&len, pp, sizeof(uint8_t));
+    READ_BUFF(id, pp, len);
+
+    *qres = create_room(roomtype, title, id);
 }
