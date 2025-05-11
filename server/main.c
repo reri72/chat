@@ -13,6 +13,7 @@ extern int chat_server_init();
 extern int chat_server_end();
 
 extern MYSQL *conn;
+extern _logset _loglevel;
 
 volatile sig_atomic_t exit_flag = 0;
 
@@ -48,6 +49,10 @@ int main(int argc, char **argv)
     sigaction(SIGPIPE, &sa_pipe, NULL);
 
     fill_server_conf_value();
+    
+    init_log(_loglevel, 4096);
+    create_logfile(pwd,"/log/chat_server.log");
+
     server_db_configure();
 
     if ( chat_server_init() != 0 )
@@ -56,9 +61,6 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    init_log(LOG_DEBUG, 4096);
-    create_logfile(pwd,"/log/chat_server.log");
-
     pthread_t threads[THREAD_POOL_SIZE] = {0,};
     void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, thread_delete_old_client};
     

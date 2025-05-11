@@ -14,6 +14,7 @@ volatile sig_atomic_t exit_flag = 0;
 char username[MAX_ID_LENGTH] = {0,};
 
 extern void fill_client_conf_value();
+extern _logset _loglevel;
 
 void sighandle(int signum, siginfo_t *info, void *context);
 
@@ -46,10 +47,10 @@ int main(int argc, char **argv)
     sigaction(SIGABRT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
-    init_log(LOG_DEBUG, 4096);
-    create_logfile(pwd,"/log/chat_client.log");
-
     fill_client_conf_value();
+
+    init_log(_loglevel, 4096);
+    create_logfile(pwd,"/log/chat_client.log");
 
     if ( chat_client_init() != 0 )
     {

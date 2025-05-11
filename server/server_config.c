@@ -27,7 +27,7 @@ void fill_server_conf_value()
 
     if (validate_config_file(confpath) == 0)
     {
-        LOG_ERR("Not exist server.conf\n");
+        printf("Not exist server.conf\n");
         exit(1);
     }
 
@@ -55,13 +55,12 @@ void fill_server_conf_value()
     if (log_level)
     {
         _loglevel = *log_level;
-        change_log_level(_loglevel);
         FREE(log_level);
     }
 
     if (key_path == NULL || cert_path == NULL)
     {
-        LOG_ERR("Not exist cert or key file\n");
+        printf("Not exist cert or key file\n");
         exit(1);
     }
 
@@ -75,7 +74,7 @@ void fill_server_conf_value()
 
     if (dbid == NULL || dbpasswd == NULL)
     {
-        LOG_ERR("Not exist database connecting info \n");
+        printf("Not exist database connecting info \n");
         exit(1);
     }
 

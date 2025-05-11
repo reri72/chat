@@ -50,7 +50,6 @@ void fill_client_conf_value()
     if (log_level)
     {
         _loglevel = *log_level;
-        change_log_level(_loglevel);
         FREE(log_level);
     }
 }
