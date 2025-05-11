@@ -36,3 +36,11 @@ chat_client: $(CLIENT_OBJ)
 
 clean:
 	rm -f $(TARGET) $(SERVER_OBJ) $(CLIENT_OBJ)
+	rm -rf pkg
+
+pkg:
+	mkdir -p pkg
+	cp chat_server pkg/
+	cp chat_client pkg/
+	cp etc/* pkg/
+	

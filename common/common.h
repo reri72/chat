@@ -36,6 +36,10 @@
 #define PROTO_REQ   0
 #define PROTO_RES   1
 
+#define A_YEAR  (60*60*24*360)
+#define A_MONTH (60*60*24*30)
+#define A_DAY   (60*60*24)
+
 typedef struct proto_hdr
 {
     unsigned short proto;
