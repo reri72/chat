@@ -118,6 +118,7 @@ void server_db_configure()
                                      "ID INT AUTO_INCREMENT PRIMARY KEY, "
                                      "USERNAME VARCHAR(20) NOT NULL, "
                                      "PASSWORD VARCHAR(44) NOT NULL, "
+                                     "CREATE_TIME TIMESTAMP NOT NULL DEFAULT NOW(), "
                                      "LAST_LOGIN_TIME TIMESTAMP NULL DEFAULT NULL)";
 
     if (mysql_query(conn, db_client_query))

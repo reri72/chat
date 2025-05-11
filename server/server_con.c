@@ -31,6 +31,8 @@ void createroom_process(char *packet, int8_t *qres);
 
 extern volatile sig_atomic_t exit_flag;
 
+extern MYSQL *conn;
+
 extern int server_sock;
 
 extern char serverip[IP_LEN];
@@ -196,6 +198,8 @@ int send_data(SSL *ssl, char *data, size_t len)
 
 void *thread_accept_client(void* arg)
 {
+    LOG_DEBUG("[%s] start thread \n", __FUNCTION__);
+
     struct sockaddr_in addr;
     fd_set readfds;
 
@@ -296,6 +300,46 @@ void *thread_accept_client(void* arg)
         }
     }
 
+    LOG_DEBUG("[%s] end thread \n", __FUNCTION__);
+    return NULL;
+}
+
+void *thread_delete_old_client(void *arg)
+{
+    LOG_DEBUG("[%s] start thread \n", __FUNCTION__);
+
+    char query[256] = {0,};
+
+    time_t curtime = time(NULL);
+    time_t oldtime = time(NULL);
+
+    while (exit_flag == 0)
+    {
+        curtime = time(NULL);
+        if ( (curtime - oldtime) < A_DAY )
+        {
+            nano_sleep(0, 100);
+            continue;
+        }
+
+        memset(query, 0, sizeof(query));
+        snprintf(query, sizeof(query), 
+                    "DELETE FROM CLIENT_INFO " 
+                    "WHERE " 
+                    "(LAST_LOGIN_TIME IS NOT NULL AND "
+                    "TIMESTAMPDIFF(SECOND, CREATE_TIME, LAST_LOGIN_TIME) > %d) "
+                    "OR "
+                    "(LAST_LOGIN_TIME IS NULL AND "
+                    "TIMESTAMPDIFF(SECOND, CREATE_TIME, NOW()) > %d) ",
+                    A_YEAR, A_MONTH);
+
+        if (mysql_query(conn, query))
+            LOG_ERR("query failed: %s\n", mysql_error(conn));
+
+        oldtime = time(NULL);
+    }
+
+    LOG_DEBUG("[%s] end thread \n", __FUNCTION__);
     return NULL;
 }
 
@@ -330,7 +374,7 @@ void *thread_server_communication(void* arg)
             case PROTO_CREATE_ROOM:
                 {
                     if (createroom_res(ssl, packet))
-                        LOG_DEBUG("creat room response success \n");
+                        LOG_DEBUG("create room response success \n");
                 } break;
             default:
                 break;

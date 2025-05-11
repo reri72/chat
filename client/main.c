@@ -84,18 +84,19 @@ int main(int argc, char **argv)
                 ret = chat();
                 if (ret < 3)
                 {
-                    if (createroom(ret) == FAILED)
-                        printf("create room failed \n");
+                    if (createroom(ret) == SUCCESS)
+                        printf("do somethings.. \n");
                 }
                 else if (ret == 3)
                 {
+                    // list
                     goto ENTRY;
                 }
                 else
                 {
                     goto ENTRY;
                 }
-            }
+            } break;
             case HOME_EXIT1:
             case HOME_EXIT2:
             default:
