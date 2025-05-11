@@ -350,3 +350,25 @@ int parse_createroom_res(char *packet)
     
     return res;
 }
+
+char *room_list_req(int *buflen)
+{
+    proto_hdr_t hdr = {0,};
+
+    char *buffer    = NULL;
+    char *curp      = NULL;
+
+    hdr.proto = htons(PROTO_ROOM_LIST);
+    hdr.flag = PROTO_REQ;
+
+    buffer = (char *)malloc(sizeof(hdr));
+    if (buffer != NULL)
+    {
+        curp = buffer;
+        WRITE_BUFF(curp, &hdr, sizeof(hdr));
+
+        *buflen = (sizeof(hdr));
+    }
+
+    return buffer;
+}

@@ -239,6 +239,7 @@ int createroom(int roomtype)
                 FREE(recvpkt);
             }
         }
+        FREE(pktbuf);
     }
     
     if (res == FAILED)
@@ -247,16 +248,41 @@ int createroom(int roomtype)
         printf("create room failed (title : %s) \n", title);
         nano_sleep(3,0);
     }
-
-    FREE(pktbuf);
-
+    
     return res;
 }
 
 int join_room()
 {
+    int res = FAILED;
+
+    char *pktbuf    = NULL;
+    int pktbuflen   = 0;
+
+    system("/usr/bin/clear");
+
+    pktbuf = room_list_req(&pktbuflen);
+    if (pktbuf)
+    {
+        if (send_data(pktbuf, pktbuflen) != -1)
+        {
+            char recvpkt[65000] = {0,};
+            if (recv_data(recvpkt, sizeof(recvpkt)))
+            {
+                printf("%s \n", recvpkt + sizeof(proto_hdr_t));
+                res = SUCCESS;
+            }
+        }
+        FREE(pktbuf);
+    }
     
-    return 0;
+    if (res == FAILED)
+    {
+        printf("room list request failed \n");
+        nano_sleep(3,0);
+    }
+
+    return res;
 }
 
 int login()
@@ -294,6 +320,7 @@ int login()
                 FREE(recvpkt);
             }
         }
+        FREE(buffer);
     }
     
     if (ret == FAILED)
@@ -302,8 +329,6 @@ int login()
         printf("login failed (user : %s) \n", id);
         nano_sleep(3,0);
     }
-
-    FREE(buffer);
 
     return ret;
 }
@@ -337,6 +362,7 @@ void join()
                 FREE(recvpkt);
             }
         }
+        FREE(buffer);
     }
 
     if (ret == SUCCESS)
@@ -351,8 +377,6 @@ void join()
     }
 
     nano_sleep(3,0);
-    
-    FREE(buffer);
 }
 
 void logout()

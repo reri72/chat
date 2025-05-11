@@ -12,6 +12,7 @@
 #include "reriutils.h"
 #include "server_con.h"
 #include "server_sql.h"
+#include "chat_handle.h"
 
 SSL_CTX *ctx = NULL;
 
@@ -27,6 +28,7 @@ int user_login_res(SSL *ssl, char *packet);
 void login_user_process(char *packet, int8_t *qres);
 int createroom_res(SSL *ssl, char *packet);
 void createroom_process(char *packet, int8_t *qres);
+int room_list_res(SSL *ssl);
 // ------------------------------------------------------------------
 
 extern volatile sig_atomic_t exit_flag;
@@ -376,6 +378,11 @@ void *thread_server_communication(void* arg)
                     if (createroom_res(ssl, packet))
                         LOG_DEBUG("create room response success \n");
                 } break;
+            case PROTO_ROOM_LIST:
+                {
+                    if (room_list_res(ssl))
+                        LOG_DEBUG("chatroom list send success \n");
+                } break;
             default:
                 break;
         }
@@ -550,4 +557,29 @@ void createroom_process(char *packet, int8_t *qres)
     READ_BUFF(id, pp, len);
 
     *qres = create_room(roomtype, title, id);
+    if (*qres == SUCCESS)
+        chatroom_create(title, roomtype);
+}
+
+int room_list_res(SSL *ssl)
+{
+    int ret = FAILED;
+    char buffer[65500] = {0,};
+    char list[65000] = {0,};
+
+    proto_hdr_t hdr;
+
+    memset(&hdr, 0, sizeof(proto_hdr_t));
+
+    hdr.proto   = htons(PROTO_ROOM_LIST);
+    hdr.flag    = PROTO_RES;
+    
+    list_up_room(list);
+
+    memcpy(buffer, &hdr, sizeof(hdr));
+    memcpy(buffer+sizeof(hdr), list, strlen(list));
+    
+    ret = send_data(ssl, buffer, (sizeof(hdr) + strlen(list)));
+
+    return ret;
 }

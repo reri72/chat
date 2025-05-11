@@ -85,13 +85,14 @@ int main(int argc, char **argv)
                 ret = chat();
                 if (ret < 3)
                 {
-                    if (createroom(ret) == SUCCESS)
-                        printf("do somethings.. \n");
+                    createroom(ret);
                 }
                 else if (ret == 3)
                 {
-                    // list
-                    goto ENTRY;
+                    if (join_room() == SUCCESS)
+                    {
+                        // 
+                    }
                 }
                 else
                 {
