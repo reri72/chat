@@ -132,7 +132,8 @@ void server_db_configure()
                                         "ROOMTYPE INT NOT NULL, "
                                         "TITLE VARCHAR(100) NOT NULL, "
                                         "OWNER VARCHAR(20) NOT NULL, "
-                                        "CREATE_DATE TIMESTAMP NOT NULL)";
+                                        "CREATE_DATE TIMESTAMP NOT NULL, "
+                                        "DESTROY_DATE TIMESTAMP NULL DEFAULT NULL)";
 
     if (mysql_query(conn, db_chatroom_query))
     {

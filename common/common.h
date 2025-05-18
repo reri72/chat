@@ -34,6 +34,8 @@
 #define PRIVATE_ROOM            1
 #define GROUP_ROOM              2
 
+#define MAX_ROOMS   50
+
 #define PROTO_REQ   0
 #define PROTO_RES   1
 

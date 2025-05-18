@@ -3,9 +3,11 @@
 #include <signal.h>
 #include <pthread.h>
 
+#include "common.h"
 #include "server_con.h"
 #include "sslUtils.h"
 #include "myutils.h"
+#include "chat_handle.h"
 
 extern void fill_server_conf_value();
 extern void server_db_configure();
@@ -60,6 +62,12 @@ int main(int argc, char **argv)
         perror("chat_server_init");
         exit(1);
     }
+
+    if (load_chatroom(MAX_ROOMS) != SUCCESS)
+    {
+        LOG_ERR("Failed to create thread");
+        exit(1);
+    }
     
     pthread_t threads[THREAD_POOL_SIZE] = {0,};
     void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, thread_delete_old_client};
@@ -78,6 +86,7 @@ int main(int argc, char **argv)
     }
 
     chat_server_end();
+    destroy_chatroom();
     destroy_log();
     mysql_close(conn);
     mysql_library_end();
