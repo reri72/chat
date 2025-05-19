@@ -208,7 +208,7 @@ int chat()
     return ret;
 }
 
-int createroom(int roomtype)
+int createroom(int roomtype, int *roomid)
 {
     int res = FAILED;
     char title[MAX_ROOMTITLE_LENGTH] = {0,};
@@ -225,15 +225,15 @@ int createroom(int roomtype)
     {
         if (send_data(pktbuf, pktbuflen) != -1)
         {
-            size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+            size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t) + sizeof(int));
             char *recvpkt = (char *)malloc(pktsz);
             if (recvpkt)
             {
                 if (recv_data(recvpkt, pktsz))
                 {
-                    if ( (res = parse_createroom_res(recvpkt)) == SUCCESS )
+                    if ( (res = parse_createroom_res(recvpkt, roomid)) == SUCCESS )
                     {
-                        LOG_DEBUG("create room success \n");
+                        LOG_DEBUG("create room success (%d)\n", *roomid);
                     }
                 }
                 FREE(recvpkt);
@@ -252,7 +252,7 @@ int createroom(int roomtype)
     return res;
 }
 
-int join_room()
+int join_chatroom()
 {
     int res = FAILED;
 
@@ -269,7 +269,7 @@ int join_room()
             char recvpkt[65000] = {0,};
             if (recv_data(recvpkt, sizeof(recvpkt)))
             {
-                printf("%s \n", recvpkt + sizeof(proto_hdr_t));
+                LOG_INFO("\n%s\n", recvpkt + sizeof(proto_hdr_t));
                 res = SUCCESS;
             }
         }

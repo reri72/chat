@@ -20,19 +20,20 @@ extern MYSQL *conn;
 
 roomlist_t *roomlist = NULL;
 
-void chatroom_create(char *name, int isgroup)
+int g_roomid = 0;
+
+int chatroom_create(char *name, int isgroup)
 {
-    static int roomidx;
     pthread_mutex_lock(&mutex);
     {
         if (roomlist->size >= MAX_ROOMS)
         {
             LOG_WARN("chatroom is full\n");
             pthread_mutex_unlock(&mutex);
-            return;
+            return FAILED;
         }
 
-        chatroom_t *room = setup_room(roomidx++, name, isgroup, 1);
+        chatroom_t *room = setup_room(g_roomid, name, isgroup, 1);
         if (roomlist->head == NULL)
         {
             roomlist->head = room;
@@ -45,37 +46,58 @@ void chatroom_create(char *name, int isgroup)
         roomlist->size++;
     }
     pthread_mutex_unlock(&mutex);
+
+    return SUCCESS;
 }
 
 void list_up_room(char *buff)
 {
+    size_t buff_offset = 0;
+
     pthread_mutex_lock(&mutex);
     {
         chatroom_t *curroom = roomlist->head;
-        
-        strcat(buff, "==== chatroom list ====\n");
+        int written = 0;
+
+        written = snprintf(buff + buff_offset, 10000 - buff_offset, "==== chatroom list ====\n");
+        if (written > 0)
+            buff_offset += written;
+
         if (curroom == NULL)
         {
-            strcat(buff, " -- NULL --");
+            written = snprintf(buff + buff_offset, 10000 - buff_offset, " -- NULL -- ");
+            if (written > 0)
+                buff_offset += written;
         }
         else
         {
             while (curroom != NULL)
             {
                 char line[256] = {0,};
+                int line_len;
 
-                sprintf(line, "[room id:%d] name : %s (%s) - in %d person(s)\n",
-                        curroom->room_id,
-                        curroom->name,
-                        curroom->is_group ? "Group" : "1:1",
-                        curroom->user_count);
+                line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
+                                    curroom->room_id,
+                                    curroom->name,
+                                    curroom->is_group ? "Group" : "1:1",
+                                    curroom->user_count);
 
-                strcat(buff, line);
-
+                if (buff_offset + line_len < 10000)
+                {
+                    memcpy(buff + buff_offset, line, line_len);
+                    buff_offset += line_len;
+                }
+                else
+                {
+                    break;
+                }
                 curroom = curroom->next;
             }
         }
-        strcat(buff, "=======================\n");
+
+        written = snprintf(buff + buff_offset, 10000 - buff_offset, "=======================\n");
+        if (written > 0)
+            buff_offset += written;
     }
     pthread_mutex_unlock(&mutex);
 }
@@ -210,3 +232,36 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
     return room;
 }
 
+void get_roomid_seq()
+{
+    char query[256] = {0,};
+    snprintf(query, sizeof(query), "SELECT MAX(ID) FROM CHAT_ROOM ");
+
+    if (mysql_query(conn, query))
+    {
+        LOG_WARN("query failed: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (result == NULL)
+    {
+        LOG_WARN("mysql_store_result() failed: %s\n", mysql_error(conn));
+        return;
+    }
+    
+    if (mysql_num_rows(result) > 0)
+    {
+        MYSQL_ROW row = mysql_fetch_row(result);
+        if (row != NULL && row[0] != NULL)
+        {
+            g_roomid = strtol(row[0], NULL, 10);
+        }
+    }
+    else
+    {
+        LOG_WARN("No rows found\n");
+    }
+
+    mysql_free_result(result);
+}

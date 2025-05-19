@@ -14,7 +14,7 @@ char *login_req(const char *id, const char *passwd, int *buflen);
 int parse_login_res(char *packet);
 
 char* createroom_req(int type, char *title, char *username, int *buflen);
-int parse_createroom_res(char *packet);
+int parse_createroom_res(char *packet, int *roomid);
 
 char *room_list_req(int *buflen);
 

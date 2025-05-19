@@ -4,6 +4,8 @@
 #include "server_sql.h"
 #include "reriutils.h"
 
+extern int g_roomid;
+
 extern MYSQL *conn;
 
 int join_user(const char *id, const char *passwd)
@@ -147,22 +149,20 @@ int login_user(const char *id, const char *passwd)
 
 int create_room(int type, const char *title, const char *id)
 {    
-    char    query[512]  = {0,};
+    char    query[1024]  = {0,};
     int     ret         = FAILED;
     
     snprintf(query, sizeof(query), 
-                "INSERT INTO CHAT_ROOM(ROOMTYPE, TITLE, OWNER, CREATE_DATE) "
-                "VALUES(%d, '%s', '%s', now())", 
-                type, title, id);
+                "INSERT INTO CHAT_ROOM(ID, ROOMTYPE, TITLE, OWNER, CREATE_DATE) "
+                "VALUES(%d, %d, '%s', '%s', now())", 
+                ++g_roomid, type, title, id);
 
     if (mysql_query(conn, query))
     {
         LOG_WARN("query failed: %s\n", mysql_error(conn));
+        return ret;
     }
-    else
-    {
-        ret = SUCCESS;
-    }
-    
+
+    ret = SUCCESS;
     return ret;
 }

@@ -33,6 +33,8 @@ int room_list_res(SSL *ssl);
 
 extern volatile sig_atomic_t exit_flag;
 
+extern int g_roomid;
+
 extern MYSQL *conn;
 
 extern int server_sock;
@@ -513,7 +515,7 @@ int createroom_res(SSL *ssl, char *packet)
 
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
-    totlen = sizeof(proto_hdr_t) + sizeof(int8_t);
+    totlen = sizeof(proto_hdr_t) + sizeof(int8_t) + sizeof(int);
     buffer = (char *)malloc(totlen);
     if (buffer == NULL)
         return -1;
@@ -528,6 +530,10 @@ int createroom_res(SSL *ssl, char *packet)
     createroom_process(packet, &qres);
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
+    if (qres == SUCCESS)
+    {
+        WRITE_BUFF(pp, &g_roomid, sizeof(g_roomid));
+    }
     
     ret = send_data(ssl, buffer, totlen);
 
@@ -557,18 +563,20 @@ void createroom_process(char *packet, int8_t *qres)
     READ_BUFF(id, pp, len);
 
     *qres = create_room(roomtype, title, id);
+
     if (*qres == SUCCESS)
-        chatroom_create(title, roomtype);
+    {
+        *qres = chatroom_create(title, roomtype);
+    }
 }
 
 int room_list_res(SSL *ssl)
 {
     int ret = FAILED;
-    char buffer[65500] = {0,};
-    char list[65000] = {0,};
+    char buffer[10240] = {0,};
+    char list[10000] = {0,};
 
     proto_hdr_t hdr;
-
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
     hdr.proto   = htons(PROTO_ROOM_LIST);
@@ -577,7 +585,11 @@ int room_list_res(SSL *ssl)
     list_up_room(list);
 
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer+sizeof(hdr), list, strlen(list));
+
+    if (strlen(list) > 0)
+    {
+        memcpy(buffer+sizeof(hdr), list, strlen(list));
+    }
     
     ret = send_data(ssl, buffer, (sizeof(hdr) + strlen(list)));
 

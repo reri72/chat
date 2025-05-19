@@ -82,14 +82,15 @@ int main(int argc, char **argv)
             }
             case HOME_CHAT:
             {
+                int roomid = -1;
                 ret = chat();
                 if (ret < 3)
                 {
-                    createroom(ret);
+                    createroom(ret, &roomid);
                 }
                 else if (ret == 3)
                 {
-                    if (join_room() == SUCCESS)
+                    if (join_chatroom() == SUCCESS)
                     {
                         // 
                     }
@@ -97,6 +98,11 @@ int main(int argc, char **argv)
                 else
                 {
                     goto ENTRY;
+                }
+
+                if (ret == SUCCESS)
+                {
+                    
                 }
             } break;
             case HOME_EXIT1:

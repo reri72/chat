@@ -35,7 +35,9 @@ void destroy_chatroom();
 
 chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
 
-void chatroom_create(char *name, int isgroup);
+void get_roomid_seq();
+
+int chatroom_create(char *name, int isgroup);
 
 void list_up_room(char *buff);
 

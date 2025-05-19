@@ -339,7 +339,7 @@ char* createroom_req(int type, char *title, char *username, int *buflen)
     return buffer;
 }
 
-int parse_createroom_res(char *packet)
+int parse_createroom_res(char *packet, int *roomid)
 {
     char *ptr = packet;
     int8_t res = FAILED;
@@ -347,6 +347,9 @@ int parse_createroom_res(char *packet)
     ptr += sizeof(proto_hdr_t);
 
     memcpy(&res, ptr, sizeof(int8_t));
+    ptr += sizeof(int8_t);
+
+    memcpy(roomid, ptr, sizeof(int));
     
     return res;
 }

@@ -56,6 +56,8 @@ int main(int argc, char **argv)
     create_logfile(pwd,"/log/chat_server.log");
 
     server_db_configure();
+    
+    get_roomid_seq();
 
     if ( chat_server_init() != 0 )
     {

@@ -13,10 +13,10 @@ typedef enum
 
 int home(int loginok);
 int chat();
-int createroom(int roomtype);
+int createroom(int roomtype, int *roomid);
 int login();
 void join();
-int join_room();
+int join_chatroom();
 void logout();
 
 #endif
