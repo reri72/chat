@@ -130,6 +130,37 @@ void get_roomtitle(char *title_buffer, int buffer_size)
     }
 }
 
+void get_join_roomid(int *roomid)
+{
+    while (exit_flag == 0)
+    {
+        *roomid = -1;
+
+        char input_buffer[1024] = {0,};
+        char *endp = NULL;
+
+        printf("select room number : ");
+        if ( fgets(input_buffer, sizeof(input_buffer), stdin) == NULL )
+        {
+            printf("input error \n\n");
+            nano_sleep(2,0);
+            continue;
+        }
+
+        input_buffer[strcspn(input_buffer, "\n")] = '\0';
+
+        *roomid = strtol(input_buffer, &endp, 10);
+        if (endp == input_buffer || *endp != '\0' || errno == ERANGE)
+        {
+            printf("invalid data : %s \n\n", input_buffer);
+            nano_sleep(2,0);
+            continue;
+        }
+
+        break;
+    }
+}
+
 int home(int loginok)
 {
     char home_choice[7][8] = {"", "login", "join", "exit", "logout", "chat", "exit"};
@@ -252,7 +283,7 @@ int createroom(int roomtype, int *roomid)
     return res;
 }
 
-int join_chatroom()
+int join_chatroom(int *roomid)
 {
     int res = FAILED;
 
@@ -269,8 +300,18 @@ int join_chatroom()
             char recvpkt[65000] = {0,};
             if (recv_data(recvpkt, sizeof(recvpkt)))
             {
-                LOG_INFO("\n%s\n", recvpkt + sizeof(proto_hdr_t));
-                res = SUCCESS;
+                if (strstr(recvpkt, "NULL") == NULL)
+                {
+                    LOG_DEBUG("%s\n", recvpkt + sizeof(proto_hdr_t));
+                    printf("%s\n", recvpkt + sizeof(proto_hdr_t));
+
+                    get_join_roomid(roomid);
+                    if (*roomid > 0)
+                    {
+                        //
+                        res = SUCCESS;
+                    }
+                }
             }
         }
         FREE(pktbuf);

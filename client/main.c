@@ -90,9 +90,9 @@ int main(int argc, char **argv)
                 }
                 else if (ret == 3)
                 {
-                    if (join_chatroom() == SUCCESS)
+                    if (join_chatroom(&roomid) == SUCCESS)
                     {
-                        // 
+                        LOG_INFO("[%s:%d] roomid : %d \n", __FUNCTION__, __LINE__, roomid);
                     }
                 }
                 else

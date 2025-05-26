@@ -6,6 +6,7 @@ LDLIBS = -lreriutils -lmysqlclient -lpthread -lssl -lcrypto
 SERVER_SRC = \
 			common/common.c \
 			server/server_con.c \
+			server/chat_handle.c \
 			server/server_config.c \
 			server/server_sql.c \
 			server/main.c

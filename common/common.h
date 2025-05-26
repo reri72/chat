@@ -30,6 +30,7 @@
 #define PROTO_LOGIN_USER        101
 #define PROTO_CREATE_ROOM       102
 #define PROTO_ROOM_LIST         103
+#define PROTO_JOIN_ROOM         104
 
 #define PRIVATE_ROOM            1
 #define GROUP_ROOM              2
@@ -47,6 +48,7 @@ typedef struct proto_hdr
 {
     unsigned short proto;
     char flag;
+    unsigned int bodylen;
 } proto_hdr_t;
 
 typedef struct client
