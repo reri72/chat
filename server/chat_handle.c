@@ -50,31 +50,24 @@ int chatroom_create(char *name, int isgroup)
     return SUCCESS;
 }
 
-void list_up_room(char *buff)
+void list_up_room(char *buff, unsigned int *buflen)
 {
     size_t buff_offset = 0;
 
     pthread_mutex_lock(&mutex);
     {
         chatroom_t *curroom = roomlist->head;
-        int written = 0;
-
-        written = snprintf(buff + buff_offset, 10000 - buff_offset, "==== chatroom list ====\n");
-        if (written > 0)
-            buff_offset += written;
-
         if (curroom == NULL)
         {
-            written = snprintf(buff + buff_offset, 10000 - buff_offset, " -- NULL -- ");
-            if (written > 0)
-                buff_offset += written;
+            pthread_mutex_unlock(&mutex);
+            return;
         }
         else
         {
             while (curroom != NULL)
             {
-                char line[256] = {0,};
-                int line_len;
+                char line[512] = {0,};
+                int line_len = 0;
 
                 line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
                                     curroom->room_id,
@@ -94,10 +87,6 @@ void list_up_room(char *buff)
                 curroom = curroom->next;
             }
         }
-
-        written = snprintf(buff + buff_offset, 10000 - buff_offset, "=======================\n");
-        if (written > 0)
-            buff_offset += written;
     }
     pthread_mutex_unlock(&mutex);
 }

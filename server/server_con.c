@@ -418,6 +418,7 @@ int join_con_res(SSL *ssl, char *packet)
 
     hdr.proto   = htons(PROTO_CREATE_USER);
     hdr.flag    = PROTO_RES;
+    hdr.bodylen = htonl(sizeof(int8_t));
 
     WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
 
@@ -471,6 +472,7 @@ int user_login_res(SSL *ssl, char *packet)
 
     hdr.proto   = htons(PROTO_LOGIN_USER);
     hdr.flag    = PROTO_RES;
+    hdr.bodylen = htonl(sizeof(int8_t));
 
     WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
 
@@ -493,7 +495,16 @@ void login_user_process(char *packet, int8_t *qres)
     char passwd[MAX_PASSWORD_LENGTH] = {0,};
     uint8_t len = 0;
 
-    pp += sizeof(proto_hdr_t);
+    proto_hdr_t hdr = {0,};
+
+    memcpy(&hdr, pp, sizeof(hdr));
+    pp += sizeof(hdr);
+
+    if ( ntohl(hdr.bodylen) < 1)
+    {
+        *qres = FAILED;
+        return;
+    }
 
     READ_BUFF(&len, pp, sizeof(uint8_t));
     READ_BUFF(id, pp, len);
@@ -511,7 +522,7 @@ int createroom_res(SSL *ssl, char *packet)
 
     size_t totlen = 0;
     int8_t qres = FAILED;
-    proto_hdr_t hdr;
+    proto_hdr_t hdr = {0,};
 
     memset(&hdr, 0, sizeof(proto_hdr_t));
 
@@ -525,14 +536,20 @@ int createroom_res(SSL *ssl, char *packet)
     hdr.proto   = htons(PROTO_CREATE_ROOM);
     hdr.flag    = PROTO_RES;
 
-    WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
-
     createroom_process(packet, &qres);
 
-    WRITE_BUFF(pp, &qres, sizeof(qres));
     if (qres == SUCCESS)
     {
+        hdr.bodylen = htonl(sizeof(g_roomid)+sizeof(int8_t));
+        WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
+        WRITE_BUFF(pp, &qres, sizeof(qres));
         WRITE_BUFF(pp, &g_roomid, sizeof(g_roomid));
+    }
+    else
+    {
+        hdr.bodylen = htonl(sizeof(int8_t));
+        WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
+        WRITE_BUFF(pp, &qres, sizeof(qres));
     }
     
     ret = send_data(ssl, buffer, totlen);
@@ -576,19 +593,20 @@ int room_list_res(SSL *ssl)
     char buffer[10240] = {0,};
     char list[10000] = {0,};
 
-    proto_hdr_t hdr;
-    memset(&hdr, 0, sizeof(proto_hdr_t));
+    proto_hdr_t hdr = {0,};
 
     hdr.proto   = htons(PROTO_ROOM_LIST);
     hdr.flag    = PROTO_RES;
+    hdr.bodylen = 0;
     
-    list_up_room(list);
+    list_up_room(list, &hdr.bodylen);
 
+    hdr.bodylen = htonl(hdr.bodylen);
     memcpy(buffer, &hdr, sizeof(hdr));
 
-    if (strlen(list) > 0)
+    if (hdr.bodylen > 0)
     {
-        memcpy(buffer+sizeof(hdr), list, strlen(list));
+        memcpy(buffer + sizeof(hdr), list, strlen(list));
     }
     
     ret = send_data(ssl, buffer, (sizeof(hdr) + strlen(list)));

@@ -153,7 +153,7 @@ int create_room(int type, const char *title, const char *id)
     int     ret         = FAILED;
     
     snprintf(query, sizeof(query), 
-                "INSERT INTO CHAT_ROOM(ID, ROOMTYPE, TITLE, OWNER, CREATE_DATE) "
+                "INSERT INTO CHAT_ROOM(ID, ROOMTYPE, TITLE, CREATER, CREATE_DATE) "
                 "VALUES(%d, %d, '%s', '%s', now())", 
                 ++g_roomid, type, title, id);
 

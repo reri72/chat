@@ -224,6 +224,7 @@ char *join_req(const char *id, const char *passwd, int *buflen)
     p = buffer;
     *buflen = totlen;
 
+    hdr.bodylen = htonl( (totlen - sizeof(proto_hdr_t)) );
     WRITE_BUFF(p, &hdr, sizeof(proto_hdr_t));
 
     len = strlen(id);
@@ -239,12 +240,16 @@ char *join_req(const char *id, const char *passwd, int *buflen)
 
 int parse_join_res(char *packet)
 {
+    proto_hdr_t hdr = {0,};
     char *p = packet;
+
     int8_t qres = FAILED;
 
+    memcpy(&hdr, packet, sizeof(proto_hdr_t));
     p += sizeof(proto_hdr_t);
 
-    memcpy(&qres, p, sizeof(qres));
+    if ( ntohl(hdr.bodylen) == sizeof(int8_t) )
+        memcpy(&qres, p, sizeof(qres));
 
     return qres;
 }
@@ -273,6 +278,7 @@ char *login_req(const char *id, const char *passwd, int *buflen)
     p = buffer;
     *buflen = totlen;
 
+    hdr.bodylen = htonl(totlen - sizeof(proto_hdr_t));
     WRITE_BUFF(p, &hdr, sizeof(proto_hdr_t));
 
     len = strlen(id);
@@ -290,10 +296,13 @@ int parse_login_res(char *packet)
 {
     char *ptr = packet;
     int8_t res = FAILED;
+    proto_hdr_t hdr = {0,};
 
+    memcpy(&hdr, ptr, sizeof(hdr));
     ptr += sizeof(proto_hdr_t);
 
-    memcpy(&res, ptr, sizeof(int8_t));
+    if ( ntohl(hdr.bodylen) == sizeof(int8_t))
+        memcpy(&res, ptr, sizeof(int8_t));
     
     return res;
 }
@@ -323,6 +332,7 @@ char* createroom_req(int type, char *title, char *username, int *buflen)
 
     curp = buffer;
 
+    hdr.bodylen = htonl(totlen - sizeof(hdr));
     WRITE_BUFF(curp, &hdr, sizeof(hdr));
 
     type = htonl(type);
@@ -344,12 +354,18 @@ int parse_createroom_res(char *packet, int *roomid)
     char *ptr = packet;
     int8_t res = FAILED;
 
-    ptr += sizeof(proto_hdr_t);
+    proto_hdr_t hdr = {0,};
 
-    memcpy(&res, ptr, sizeof(int8_t));
-    ptr += sizeof(int8_t);
+    memcpy(&hdr, packet, sizeof(hdr));
+    ptr += sizeof(hdr);
 
-    memcpy(roomid, ptr, sizeof(int));
+    if ( ntohl(hdr.bodylen) > sizeof(int8_t) )
+    {
+        memcpy(&res, ptr, sizeof(int8_t));
+        ptr += sizeof(int8_t);
+
+        memcpy(roomid, ptr, sizeof(int));
+    }
     
     return res;
 }
@@ -363,6 +379,7 @@ char *room_list_req(int *buflen)
 
     hdr.proto = htons(PROTO_ROOM_LIST);
     hdr.flag = PROTO_REQ;
+    hdr.bodylen = 0;
 
     buffer = (char *)malloc(sizeof(hdr));
     if (buffer != NULL)

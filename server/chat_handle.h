@@ -39,7 +39,7 @@ void get_roomid_seq();
 
 int chatroom_create(char *name, int isgroup);
 
-void list_up_room(char *buff);
+void list_up_room(char *buff, unsigned int *buflen);
 
 // -----------------------------------------------------------------------------
 

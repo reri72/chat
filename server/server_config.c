@@ -131,7 +131,7 @@ void server_db_configure()
                                         "ID INT AUTO_INCREMENT PRIMARY KEY, "
                                         "ROOMTYPE INT NOT NULL, "
                                         "TITLE VARCHAR(100) NOT NULL, "
-                                        "OWNER VARCHAR(20) NOT NULL, "
+                                        "CREATER VARCHAR(20) NOT NULL, "
                                         "CREATE_DATE TIMESTAMP NOT NULL, "
                                         "DESTROY_DATE TIMESTAMP NULL DEFAULT NULL)";
 
