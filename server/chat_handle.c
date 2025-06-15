@@ -75,7 +75,7 @@ void list_up_room(char *buff, unsigned int *buflen)
                                     curroom->is_group ? "Group" : "1:1",
                                     curroom->user_count);
 
-                if (buff_offset + line_len < 10000)
+                if (buff_offset + line_len < 60000)
                 {
                     memcpy(buff + buff_offset, line, line_len);
                     buff_offset += line_len;
@@ -89,6 +89,8 @@ void list_up_room(char *buff, unsigned int *buflen)
         }
     }
     pthread_mutex_unlock(&mutex);
+
+    *buflen = buff_offset;
 }
 
 int load_chatroom(int max)

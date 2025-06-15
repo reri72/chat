@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <termios.h>
+#include <netinet/in.h>
 #include <fcntl.h>
 
 #include "common.h"
@@ -298,20 +299,23 @@ int join_chatroom(int *roomid)
         if (send_data(pktbuf, pktbuflen) != -1)
         {
             char recvpkt[65000] = {0,};
-            if (recv_data(recvpkt, sizeof(recvpkt)))
+            int recvbytes = recv_data(recvpkt, sizeof(recvpkt));
+            if (recvbytes >= sizeof(proto_hdr_t))
             {
-                if (strstr(recvpkt, "NULL") == NULL)
+                proto_hdr_t *hdp = (proto_hdr_t *)recvpkt;
+                if ( ntohl(hdp->bodylen) > 0)
                 {
-                    LOG_DEBUG("%s\n", recvpkt + sizeof(proto_hdr_t));
-                    printf("%s\n", recvpkt + sizeof(proto_hdr_t));
+                    char *pp = recvpkt+sizeof(proto_hdr_t);
+                    
+                    LOG_DEBUG("%s", pp);
+                    printf("%s", pp);
 
                     get_join_roomid(roomid);
                     if (*roomid > 0)
                     {
-                        //
                         res = SUCCESS;
                     }
-                }
+                }                
             }
         }
         FREE(pktbuf);

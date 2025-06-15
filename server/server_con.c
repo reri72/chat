@@ -590,8 +590,8 @@ void createroom_process(char *packet, int8_t *qres)
 int room_list_res(SSL *ssl)
 {
     int ret = FAILED;
-    char buffer[10240] = {0,};
-    char list[10000] = {0,};
+    char buffer[65000] = {0,};
+    char list[60000] = {0,};
 
     proto_hdr_t hdr = {0,};
 
