@@ -17,6 +17,7 @@ int createroom(int roomtype, int *roomid);
 int login();
 void join();
 int join_chatroom(int *roomid);
+int enter_chatroom(int *roomid);
 void logout();
 
 #endif

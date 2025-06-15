@@ -392,3 +392,75 @@ char *room_list_req(int *buflen)
 
     return buffer;
 }
+
+int parse_room_list_res(char *packet)
+{
+    proto_hdr_t *hdp = (proto_hdr_t *)packet;
+    if ( ntohl(hdp->bodylen) > 0)
+    {
+        char *pp = packet + sizeof(proto_hdr_t);
+        
+        LOG_DEBUG("%s", pp);
+        printf("%s", pp);
+
+        return SUCCESS;
+    }
+    else
+    {
+        return FAILED;
+    }
+}
+
+char *enterroom_req(int *roomid, char *username, size_t *buflen)
+{
+    proto_hdr_t hdr = {0,};
+    uint8_t namelen = strlen(username);
+    int id = *roomid;
+
+    char *buffer = NULL;
+    char *curp = NULL;
+    size_t totlen = sizeof(proto_hdr_t) + 
+                    + sizeof(roomid)
+                    + namelen
+                    + sizeof(uint8_t);
+    
+    hdr.proto = htons(PROTO_ENTER_ROOM);
+    hdr.flag = PROTO_REQ;
+    hdr.bodylen = htonl(totlen - sizeof(proto_hdr_t));
+    
+    buffer = (char *)malloc(totlen);
+    if (buffer == NULL)
+        return NULL;
+
+    curp = buffer;
+
+    WRITE_BUFF(curp, &hdr, sizeof(hdr));
+
+    id = htonl(id);
+    WRITE_BUFF(curp, &id, sizeof(int));
+    WRITE_BUFF(curp, &namelen, sizeof(namelen));
+    WRITE_BUFF(curp, username, namelen);
+
+    *buflen = totlen;
+    
+    return buffer;
+}
+
+int parse_enterroom_res(char *packet)
+{
+    proto_hdr_t *hdp = (proto_hdr_t *)packet;
+    if ( ntohl(hdp->bodylen) == sizeof(uint8_t))
+    {
+        uint8_t ret = FAILED;
+        char *pp = packet + sizeof(proto_hdr_t);
+        
+        READ_BUFF(&ret, pp, sizeof(ret));
+
+        return ret;
+    }
+    else
+    {
+        return FAILED;
+    }
+}
+

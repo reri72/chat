@@ -92,17 +92,24 @@ int main(int argc, char **argv)
                 {
                     if (join_chatroom(&roomid) == SUCCESS)
                     {
-                        LOG_INFO("[%s:%d] roomid : %d \n", __FUNCTION__, __LINE__, roomid);
+                        if (enter_chatroom(&roomid) == FAILED)
+                        {
+                            printf("enter room failed (%d)\n", roomid);
+                            LOG_INFO("enter room failed (%d)\n", roomid);
+                            nano_sleep(1, 1000);
+                        }
+                        else
+                        {
+                            // do somethings
+                            
+                            printf("success!! \n");
+                            nano_sleep(2, 1000);
+                        }
                     }
                 }
                 else
                 {
                     goto ENTRY;
-                }
-
-                if (ret == SUCCESS)
-                {
-                    
                 }
             } break;
             case HOME_EXIT1:

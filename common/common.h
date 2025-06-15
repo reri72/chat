@@ -28,9 +28,11 @@
 
 #define PROTO_CREATE_USER       100
 #define PROTO_LOGIN_USER        101
-#define PROTO_CREATE_ROOM       102
-#define PROTO_ROOM_LIST         103
-#define PROTO_JOIN_ROOM         104
+
+#define PROTO_CREATE_ROOM       200
+#define PROTO_ROOM_LIST         201
+#define PROTO_JOIN_ROOM         202
+#define PROTO_ENTER_ROOM        203
 
 #define PRIVATE_ROOM            1
 #define GROUP_ROOM              2

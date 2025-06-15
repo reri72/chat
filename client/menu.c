@@ -300,22 +300,18 @@ int join_chatroom(int *roomid)
         {
             char recvpkt[65000] = {0,};
             int recvbytes = recv_data(recvpkt, sizeof(recvpkt));
-            if (recvbytes >= sizeof(proto_hdr_t))
-            {
-                proto_hdr_t *hdp = (proto_hdr_t *)recvpkt;
-                if ( ntohl(hdp->bodylen) > 0)
-                {
-                    char *pp = recvpkt+sizeof(proto_hdr_t);
-                    
-                    LOG_DEBUG("%s", pp);
-                    printf("%s", pp);
 
+            if (recvbytes > sizeof(proto_hdr_t))
+            {
+                if (parse_room_list_res(recvpkt) == SUCCESS)
+                {
                     get_join_roomid(roomid);
                     if (*roomid > 0)
                     {
+                        LOG_INFO("target roomid : %d \n", *roomid);
                         res = SUCCESS;
                     }
-                }                
+                }
             }
         }
         FREE(pktbuf);
@@ -328,6 +324,29 @@ int join_chatroom(int *roomid)
     }
 
     return res;
+}
+
+int enter_chatroom(int *roomid)
+{
+    int ret = FAILED;
+    size_t len = 0;
+
+    char *buffer = enterroom_req(roomid, username, &len);
+    if (buffer)
+    {
+        if (send_data(buffer, len) != -1)
+        {
+            char recvpkt[1024] = {0,};
+            len = recv_data(recvpkt, sizeof(recvpkt));
+            if (len > sizeof(proto_hdr_t))
+            {
+                ret = parse_enterroom_res(recvpkt);
+            }
+        }
+        FREE(buffer);
+    }
+
+    return ret;
 }
 
 int login()

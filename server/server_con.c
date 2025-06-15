@@ -24,11 +24,17 @@ void close_client_peer(client_t *client);
 // ------------------------------------------------------------------
 int join_con_res(SSL *ssl, char *packet);
 void join_user_process(char *packet, int8_t *qres);
+
 int user_login_res(SSL *ssl, char *packet);
 void login_user_process(char *packet, int8_t *qres);
+
 int createroom_res(SSL *ssl, char *packet);
 void createroom_process(char *packet, int8_t *qres);
+
 int room_list_res(SSL *ssl);
+
+int enterroom_res(SSL *ssl, char *packet);
+void enterroom_process(char *packet, int8_t *qres);
 // ------------------------------------------------------------------
 
 extern volatile sig_atomic_t exit_flag;
@@ -385,6 +391,11 @@ void *thread_server_communication(void* arg)
                     if (room_list_res(ssl))
                         LOG_DEBUG("chatroom list send success \n");
                 } break;
+            case PROTO_ENTER_ROOM:
+                {
+                    if (enterroom_res(ssl, packet))
+                        LOG_DEBUG("enter room response success \n");
+                } break;
             default:
                 break;
         }
@@ -612,4 +623,57 @@ int room_list_res(SSL *ssl)
     ret = send_data(ssl, buffer, (sizeof(hdr) + strlen(list)));
 
     return ret;
+}
+
+int enterroom_res(SSL *ssl, char *packet)
+{
+    char *curp = NULL;
+    int ret = -1;
+
+    proto_hdr_t hdr = {0,};
+    int8_t res = FAILED;
+    size_t bufferlen = sizeof(proto_hdr_t) + sizeof(uint8_t);
+
+    char *buffer = (char *)malloc(bufferlen);
+    if (buffer == NULL)
+        return FAILED;
+
+    hdr.proto   = htons(PROTO_ENTER_ROOM);
+    hdr.flag    = PROTO_RES;
+    hdr.bodylen = htonl(sizeof(uint8_t));
+
+    enterroom_process(packet, &res);
+
+    curp = buffer;
+    WRITE_BUFF(curp, &hdr, sizeof(hdr));
+    WRITE_BUFF(curp, &res, sizeof(res));
+
+    ret = send_data(ssl, buffer, bufferlen);
+
+    FREE(buffer);
+
+    return ret;
+}
+
+void enterroom_process(char *packet, int8_t *qres)
+{
+    char *pp = packet;
+
+    proto_hdr_t hdr = {0,};
+    int roomid = -1;
+    uint8_t namelen = -1;
+    char username[256] = {0,};
+
+    READ_BUFF(&hdr, pp, sizeof(hdr));
+    
+    READ_BUFF(&roomid, pp, sizeof(roomid));
+    READ_BUFF(&namelen, pp, sizeof(uint8_t));
+    READ_BUFF(username, pp, namelen);
+
+    roomid = ntohl(roomid);
+
+    LOG_INFO("%s enter room %d \n", username, roomid);
+    
+    // do somethings
+    *qres = SUCCESS;
 }

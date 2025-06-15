@@ -17,5 +17,9 @@ char* createroom_req(int type, char *title, char *username, int *buflen);
 int parse_createroom_res(char *packet, int *roomid);
 
 char *room_list_req(int *buflen);
+int parse_room_list_res(char *packet);
+
+char *enterroom_req(int *roomid, char *username, size_t *buflen);
+int parse_enterroom_res(char *packet);
 
 #endif
