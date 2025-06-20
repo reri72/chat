@@ -34,14 +34,24 @@ int chatroom_create(char *name, int isgroup)
         }
 
         chatroom_t *room = setup_room(g_roomid, name, isgroup, 1);
+
+        if (room == NULL)
+        {
+            LOG_WARN("Failed to setup room\n");
+            pthread_mutex_unlock(&mutex);
+            return FAILED;
+        }
+
         if (roomlist->head == NULL)
         {
             roomlist->head = room;
+            roomlist->tail = room;
         }
         else
         {
             roomlist->tail->next = room;
             roomlist->tail = room;
+            roomlist->tail->next = NULL;
         }
         roomlist->size++;
     }
@@ -54,38 +64,32 @@ void list_up_room(char *buff, unsigned int *buflen)
 {
     size_t buff_offset = 0;
 
+    *buflen = 0;
+
     pthread_mutex_lock(&mutex);
     {
         chatroom_t *curroom = roomlist->head;
-        if (curroom == NULL)
+        while (curroom != NULL)
         {
-            pthread_mutex_unlock(&mutex);
-            return;
-        }
-        else
-        {
-            while (curroom != NULL)
+            char line[512] = {0,};
+            int line_len = 0;
+
+            line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
+                                curroom->room_id,
+                                curroom->name,
+                                curroom->is_group ? "Group" : "1:1",
+                                curroom->user_count);
+
+            if (buff_offset + line_len < 60000)
             {
-                char line[512] = {0,};
-                int line_len = 0;
-
-                line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
-                                    curroom->room_id,
-                                    curroom->name,
-                                    curroom->is_group ? "Group" : "1:1",
-                                    curroom->user_count);
-
-                if (buff_offset + line_len < 60000)
-                {
-                    memcpy(buff + buff_offset, line, line_len);
-                    buff_offset += line_len;
-                }
-                else
-                {
-                    break;
-                }
-                curroom = curroom->next;
+                memcpy(buff + buff_offset, line, line_len);
+                buff_offset += line_len;
             }
+            else
+            {
+                break;
+            }
+            curroom = curroom->next;
         }
     }
     pthread_mutex_unlock(&mutex);
@@ -146,6 +150,7 @@ int load_chatroom(int max)
         if (roomlist->head == NULL)
         {
             roomlist->head = room;
+            roomlist->tail = room;
             cur = roomlist->head;
             room->next = NULL;            
         }
@@ -153,8 +158,10 @@ int load_chatroom(int max)
         {
             cur->next = room;
             roomlist->tail = room;
+            roomlist->tail->next = NULL;
             cur = room;
-        }        
+        }
+        roomlist->size++;
     }
 
     mysql_free_result(result);

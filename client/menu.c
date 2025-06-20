@@ -213,7 +213,7 @@ int home(int loginok)
 
 int chat()
 {
-    char chat_choice[5][16] = {"", "create 1:1 room", "create room", "join room", "exit"};
+    char chat_choice[5][20] = {"", "create 1:1 room", "create group room", "join room", "exit"};
     int ret = 0;
 
     while (1)
