@@ -4,7 +4,7 @@
 #define MAX_USERS_PER_ROOM 10
 
 typedef struct {
-    int socket;
+    int sockfd;
     char username[20];
     int current_room_id;
 } chatclient_t;
@@ -35,11 +35,15 @@ void destroy_chatroom();
 
 chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
 
+void *thread_chatroom(void *arg);
+
 void get_roomid_seq();
 
 int chatroom_create(char *name, int isgroup);
 
 void list_up_room(char *buff, unsigned int *buflen);
+
+chatroom_t *add_room_user(int room_id, chatclient_t *cli);
 
 // -----------------------------------------------------------------------------
 

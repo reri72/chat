@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <signal.h>
 #include <unistd.h>
 
+#include "client_chat.h"
 #include "client_con.h"
 #include "menu.h"
 
@@ -100,10 +100,8 @@ int main(int argc, char **argv)
                         }
                         else
                         {
-                            // do somethings
-                            
-                            printf("success!! \n");
-                            nano_sleep(2, 1000);
+                            LOG_INFO("enter_chatroom success!! \n");
+                            running_chat();
                         }
                     }
                 }

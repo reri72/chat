@@ -184,8 +184,8 @@ void destroy_chatroom()
 
         for (i = 0; i < room->user_count; i++)
         {
-            close(room->users->socket);
-            room->users->socket = -1;
+            close_sock(&room->users->sockfd);
+            room->users->sockfd = -1;
 
             memset(room->users->username, 0, sizeof(room->users->username));
             room->users->current_room_id = -1;
@@ -230,6 +230,16 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
     return room;
 }
 
+void *thread_chatroom(void *arg)
+{
+    chatroom_t *room = (chatroom_t *)arg;
+    while (exit_flag == 0 || room->user_count > 0)
+    {
+        // do somethings
+    }
+    return NULL;
+}
+
 void get_roomid_seq()
 {
     char query[256] = {0,};
@@ -263,3 +273,34 @@ void get_roomid_seq()
 
     mysql_free_result(result);
 }
+
+chatroom_t *add_room_user(int room_id, chatclient_t *cli)
+{
+    chatroom_t *room = roomlist->head;
+    int ret = FAILED;
+    
+    if (roomlist->size < 1)
+        return NULL;
+    
+    while (room != NULL)
+    {
+        if (room->room_id == room_id)
+        {
+            if (room->user_count >= MAX_USERS_PER_ROOM && room->is_group == 1)
+                return NULL;
+            else if (room->user_count >= 2 && room->is_group == 0)
+                return NULL;
+            
+            memcpy(&room->users[room->user_count++], cli, sizeof(chatclient_t));            
+            ret = SUCCESS;
+            break;
+        }
+        room = room->next;
+    }
+    
+    if (ret == SUCCESS)
+        return room;
+
+    return NULL;
+}
+

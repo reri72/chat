@@ -33,8 +33,8 @@ void createroom_process(char *packet, int8_t *qres);
 
 int room_list_res(SSL *ssl);
 
-int enterroom_res(SSL *ssl, char *packet);
-void enterroom_process(char *packet, int8_t *qres);
+int enterroom_res(SSL *ssl, char *packet, client_t *client);
+void enterroom_process(char *packet, int8_t *qres, client_t *client);
 // ------------------------------------------------------------------
 
 extern volatile sig_atomic_t exit_flag;
@@ -375,7 +375,6 @@ void *thread_server_communication(void* arg)
                     if (join_con_res(ssl, packet))
                         LOG_DEBUG("join response success \n");
                 } break;
-
             case PROTO_LOGIN_USER:
                 {
                     if (user_login_res(ssl, packet))
@@ -393,8 +392,10 @@ void *thread_server_communication(void* arg)
                 } break;
             case PROTO_ENTER_ROOM:
                 {
-                    if (enterroom_res(ssl, packet))
+                    if (enterroom_res(ssl, packet, client))
+                    {
                         LOG_DEBUG("enter room response success \n");
+                    }
                 } break;
             default:
                 break;
@@ -625,7 +626,7 @@ int room_list_res(SSL *ssl)
     return ret;
 }
 
-int enterroom_res(SSL *ssl, char *packet)
+int enterroom_res(SSL *ssl, char *packet, client_t *client)
 {
     char *curp = NULL;
     int ret = -1;
@@ -642,7 +643,7 @@ int enterroom_res(SSL *ssl, char *packet)
     hdr.flag    = PROTO_RES;
     hdr.bodylen = htonl(sizeof(uint8_t));
 
-    enterroom_process(packet, &res);
+    enterroom_process(packet, &res, client);
 
     curp = buffer;
     WRITE_BUFF(curp, &hdr, sizeof(hdr));
@@ -655,11 +656,14 @@ int enterroom_res(SSL *ssl, char *packet)
     return ret;
 }
 
-void enterroom_process(char *packet, int8_t *qres)
+void enterroom_process(char *packet, int8_t *qres, client_t *client)
 {
     char *pp = packet;
 
+    chatclient_t cli = {0,};
+    chatroom_t *room = NULL;
     proto_hdr_t hdr = {0,};
+
     int roomid = -1;
     uint8_t namelen = -1;
     char username[256] = {0,};
@@ -672,8 +676,21 @@ void enterroom_process(char *packet, int8_t *qres)
 
     roomid = ntohl(roomid);
 
-    LOG_INFO("%s enter room %d \n", username, roomid);
-    
-    // do somethings
-    *qres = SUCCESS;
+    cli.sockfd = client->sockfd;
+    cli.current_room_id = roomid;
+    memcpy(cli.username, username, namelen);
+
+    room = add_room_user(roomid, &cli);
+    if (room != NULL)
+    {
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, thread_chatroom, (void*)room) == 0)
+        {
+            if (pthread_detach(thread) == 0)
+            {
+                LOG_INFO("%s enter room %d success.\n", username, roomid);
+                *qres = SUCCESS;
+            }
+        }
+    }
 }

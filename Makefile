@@ -16,6 +16,7 @@ CLIENT_SRC = \
 			client/client_config.c \
 			client/client_con.c \
 			client/menu.c \
+			client/client_chat.c \
 			client/main.c
 			
 
