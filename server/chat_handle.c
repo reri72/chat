@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
 
@@ -9,13 +10,13 @@
 
 #include "reriutils.h"
 #include "chat_handle.h"
+#include "server_con.h"
 
 // ------------------------------------------------------------------
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern volatile sig_atomic_t exit_flag;
-
 extern MYSQL *conn;
 
 roomlist_t *roomlist = NULL;
@@ -235,9 +236,29 @@ void *thread_chatroom(void *arg)
     chatroom_t *room = (chatroom_t *)arg;
     while (exit_flag == 0 || room->user_count > 0)
     {
-        // do somethings
+        char msg[BUFFER_SIZE] = {0,};
+        int recvlen = receive_data(room->users[(room->user_count-1)].ssl, msg, sizeof(msg));
+        
+        if (recvlen <= 0)
+            break;
+        else if (recvlen)
+        {
+            if (recvlen == strlen("quit"))
+                break;
+            send_msg(msg, recvlen, room);
+        }
     }
+
     return NULL;
+}
+
+void send_msg(char *msg, int len, chatroom_t *room)
+{
+    int i = 0;
+    for (i = 0; i < room->user_count; i++)
+    {
+        send_data(room->users->ssl, msg, len);
+    }
 }
 
 void get_roomid_seq()

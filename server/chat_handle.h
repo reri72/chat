@@ -5,6 +5,7 @@
 
 typedef struct {
     int sockfd;
+    SSL *ssl;
     char username[20];
     int current_room_id;
 } chatclient_t;
@@ -36,6 +37,8 @@ void destroy_chatroom();
 chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
 
 void *thread_chatroom(void *arg);
+
+void send_msg(char *msg, int len, chatroom_t *room);
 
 void get_roomid_seq();
 

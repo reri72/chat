@@ -6,18 +6,13 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <pthread.h>
-
 #include "common.h"
 
-#include "reriutils.h"
 #include "server_con.h"
 #include "server_sql.h"
 #include "chat_handle.h"
 
 SSL_CTX *ctx = NULL;
-
-int receive_data(SSL *ssl, char *buffer, size_t bufsize);
-int send_data(SSL *ssl, char *data, size_t len);
 
 void close_client_peer(client_t *client);
 
@@ -227,7 +222,7 @@ void *thread_accept_client(void* arg)
         int client_sock = -1;
         SSL *ssl = NULL;
         pthread_t thread;
-        struct timeval tm = {1, 0};
+        struct timeval tm = {2, 0};
 
         FD_ZERO(&readfds);
         FD_SET(server_sock, &readfds);
@@ -328,7 +323,7 @@ void *thread_delete_old_client(void *arg)
         curtime = time(NULL);
         if ( (curtime - oldtime) < A_DAY )
         {
-            nano_sleep(0, 100);
+            nano_sleep(1, 0);
             continue;
         }
 
@@ -677,6 +672,7 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
     roomid = ntohl(roomid);
 
     cli.sockfd = client->sockfd;
+    cli.ssl = client->ssl;
     cli.current_room_id = roomid;
     memcpy(cli.username, username, namelen);
 
