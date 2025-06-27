@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/select.h>
+#include <netinet/in.h>
 
 #include "common.h"
 
@@ -19,9 +21,33 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 extern volatile sig_atomic_t exit_flag;
 extern MYSQL *conn;
 
+extern unsigned short chatport;
+extern char serverip[IP_LEN];
+
 roomlist_t *roomlist = NULL;
 
 int g_roomid = 0;
+
+extern int chat_sock;
+
+int create_chat_sock()
+{
+    chat_sock = create_sock(AF_INET, SOCK_STREAM, 0);
+    if (chat_sock < 0)
+        return FAILED;
+
+    sock_set_reuse(chat_sock);
+
+    int ret = tcp_server_process(chat_sock, chatport, serverip);
+    if (ret != SUCCESS)
+    {
+        LOG_ERR("tcp_server_process() failed \n");
+        close_sock(&chat_sock);
+        return FAILED;
+    }
+    
+    return SUCCESS;
+}
 
 int chatroom_create(char *name, int isgroup)
 {
@@ -185,9 +211,6 @@ void destroy_chatroom()
 
         for (i = 0; i < room->user_count; i++)
         {
-            close_sock(&room->users->sockfd);
-            room->users->sockfd = -1;
-
             memset(room->users->username, 0, sizeof(room->users->username));
             room->users->current_room_id = -1;
         }
@@ -222,9 +245,8 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
     }
 
     room->room_id = room_id;
-    room->is_group = is_group == GROUP_ROOM ? 1 : 0;
     strncpy(room->name, name, sizeof(room->name) - 1);
-
+    room->is_group = is_group == GROUP_ROOM ? 1 : 0;
     room->user_count = 0;
     memset(room->users, 0, sizeof(room->users));
     
@@ -234,31 +256,43 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
 void *thread_chatroom(void *arg)
 {
     chatroom_t *room = (chatroom_t *)arg;
-    while (exit_flag == 0 || room->user_count > 0)
+
+    struct sockaddr_in clnt_adr = {0,};
+    socklen_t client_addr_size = sizeof(clnt_adr);
+    room->users[room->user_count-1].sockfd = accept(chat_sock, (struct sockaddr*)&clnt_adr, &client_addr_size);
+
+    if (room->users[room->user_count-1].sockfd == -1)
     {
-        char msg[BUFFER_SIZE] = {0,};
-        int recvlen = receive_data(room->users[(room->user_count-1)].ssl, msg, sizeof(msg));
+        perror("accept() error");
+        del_room_user(room->room_id, &room->users[(room->user_count-1)]);
+        close_sock(&room->users[room->user_count-1].sockfd);
+        return NULL;
+    }
+    
+    ssize_t bytes_read = 0;
+    char buffer[BUFFER_SIZE] = {0,};
+
+    while ((bytes_read = recv(room->users[room->user_count-1].sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0)
+    {
+        buffer[bytes_read] = '\0';
         
-        if (recvlen <= 0)
-            break;
-        else if (recvlen)
+        for (int i = 0; i < room->user_count; i++)
         {
-            if (recvlen == strlen("quit"))
-                break;
-            send_msg(msg, recvlen, room);
+            if (room->users[i].sockfd)
+            {
+                if (send(room->users[i].sockfd, buffer, bytes_read, 0) == -1)
+                {
+                    perror("send to other client failed");
+                }
+            }
         }
     }
 
-    return NULL;
-}
+    close_sock(&room->users[room->user_count-1].sockfd);
+    
+    del_room_user(room->room_id, &room->users[(room->user_count-1)]);
 
-void send_msg(char *msg, int len, chatroom_t *room)
-{
-    int i = 0;
-    for (i = 0; i < room->user_count; i++)
-    {
-        send_data(room->users->ssl, msg, len);
-    }
+    return NULL;
 }
 
 void get_roomid_seq()
@@ -325,3 +359,7 @@ chatroom_t *add_room_user(int room_id, chatclient_t *cli)
     return NULL;
 }
 
+void del_room_user(int room_id, chatclient_t *cli)
+{
+
+}

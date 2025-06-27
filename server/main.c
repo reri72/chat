@@ -65,6 +65,13 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    if (create_chat_sock() != SUCCESS)
+    {
+        perror("create_chat_sock");
+        chat_server_end();
+        exit(1);
+    }
+
     if (load_chatroom(MAX_ROOMS) != SUCCESS)
     {
         LOG_ERR("Failed to create thread");

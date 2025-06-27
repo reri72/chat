@@ -16,7 +16,8 @@
         memcpy(buff, pp, size); \
         pp += size;
 
-#define DEFAULT_SERVER_PORT 7878
+#define DEFAULT_SERVER_PORT     7878
+#define DEFAULT_CHAT_PORT       8787
 
 #define IP_LEN 16
 #define CERT_PATH_LEN 2048

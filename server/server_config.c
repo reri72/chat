@@ -9,6 +9,7 @@
 MYSQL *conn = NULL;
 char serverip[IP_LEN] = {0,};
 unsigned short serverport = DEFAULT_SERVER_PORT;
+unsigned short chatport = DEFAULT_CHAT_PORT;
 char certpath[CERT_PATH_LEN] = {0,};
 char keypath[KEY_PATH_LEN] = {0,};
 char db_id[32] = {0,};
@@ -16,6 +17,7 @@ char db_passwd[64] = {0,};
 _logset _loglevel = LOG_DEBUG;
 
 int server_sock = -1;
+int chat_sock = -1;
 
 void fill_server_conf_value()
 {
@@ -33,6 +35,7 @@ void fill_server_conf_value()
 
     char *server_ip = (char *)get_config_value(confpath, "server_ip", TYPE_STRING);
     unsigned short *server_port = (unsigned short *)get_config_value(confpath, "server_port", TYPE_INT);
+    unsigned short *chat_port = (unsigned short *)get_config_value(confpath, "chat_port", TYPE_INT);
     char *cert_path = (char *)get_config_value(confpath, "cert_path", TYPE_STRING);
     char *key_path = (char *)get_config_value(confpath, "key_path", TYPE_STRING);
     char *dbid = (char *)get_config_value(confpath, "db_id", TYPE_STRING);
@@ -50,6 +53,12 @@ void fill_server_conf_value()
     {
         serverport = *server_port;
         FREE(server_port);
+    }
+
+    if (chat_port)
+    {
+        chatport = *chat_port;
+        FREE(chat_port);
     }
 
     if (log_level)

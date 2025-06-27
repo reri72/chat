@@ -39,6 +39,7 @@ extern int g_roomid;
 extern MYSQL *conn;
 
 extern int server_sock;
+extern int chat_sock;
 
 extern char serverip[IP_LEN];
 extern unsigned short serverport;
@@ -79,6 +80,9 @@ int chat_server_end()
 {
     if (server_sock >= 0)
         close_sock(&server_sock);
+    
+    if (chat_sock >= 0)
+        close_sock(&chat_sock);
 
     if (ctx != NULL)
         SSL_CTX_free(ctx);
@@ -671,10 +675,9 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
 
     roomid = ntohl(roomid);
 
-    cli.sockfd = client->sockfd;
-    cli.ssl = client->ssl;
     cli.current_room_id = roomid;
     memcpy(cli.username, username, namelen);
+    cli.sockfd = -1;
 
     room = add_room_user(roomid, &cli);
     if (room != NULL)
