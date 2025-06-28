@@ -125,12 +125,13 @@ int receive_data(SSL *ssl, char *buffer, size_t bufsize)
     int bytes = 0;
 
     fd_set readfds;
-    struct timeval tv = {1, 0};
-
+    
     memset(buffer, 0, bufsize);
 
     while (1)
     {
+        struct timeval tv = {1, 0};
+
         FD_ZERO(&readfds);
         FD_SET(SSL_get_fd(ssl), &readfds);
 
@@ -142,6 +143,7 @@ int receive_data(SSL *ssl, char *buffer, size_t bufsize)
         }
         else if (ret == 0)
         {
+            nano_sleep(0, 100000000);
             continue;
         }
 
@@ -364,8 +366,9 @@ void *thread_server_communication(void* arg)
         
         int bytes = receive_data(ssl, packet, sizeof(packet));
         if (bytes <= 0)
+        {
             break;
-        
+        }
         read_header(&hdr, packet);
         switch (hdr.proto)
         {
