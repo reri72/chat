@@ -3,19 +3,22 @@
 
 #define MAX_USERS_PER_ROOM 10
 
-typedef struct {
+typedef struct chatclient chatclient_t;
+
+typedef struct chatclient{
     int sockfd;
     char username[20];
     int current_room_id;
+    chatclient_t *next;
 } chatclient_t;
 
 typedef struct chatroom_t
 {
     int room_id;
+    int user_count;
     char name[100];
     int is_group;  // 0: 1:1, 1: 그룹
-    int user_count;
-    chatclient_t users[MAX_USERS_PER_ROOM];
+    chatclient_t *cli_head;
     struct chatroom_t *next;
 } chatroom_t;
 
@@ -27,23 +30,28 @@ typedef struct
     chatroom_t *tail;
 } roomlist_t;
 
+
 // -----------------------------------------------------------------------------
+
+int create_chat_sock();
+
+void broadcast_message(chatroom_t *room, int selfid, char *message, ssize_t len);
+
+int chatroom_create(char *name, int isgroup);
+
+void list_up_room(char *buff, unsigned int *buflen);
 
 int load_chatroom(int max);
 
 void destroy_chatroom();
 
-chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
-
 void *thread_chatroom(void *arg);
 
 void get_roomid_seq();
 
-int create_chat_sock();
+chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
 
-int chatroom_create(char *name, int isgroup);
-
-void list_up_room(char *buff, unsigned int *buflen);
+chatroom_t *get_room_by_id(int id);
 
 chatroom_t *add_room_user(int room_id, chatclient_t *cli);
 

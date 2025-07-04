@@ -662,7 +662,7 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
 {
     char *pp = packet;
 
-    chatclient_t cli = {0,};
+    chatclient_t* newcli = NULL;
     chatroom_t *room = NULL;
     proto_hdr_t hdr = {0,};
 
@@ -670,6 +670,12 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
     uint8_t namelen = -1;
     char username[256] = {0,};
 
+    newcli = calloc(1, sizeof(chatclient_t));
+    if (newcli == NULL)
+    {
+        *qres = FAILED;
+        return;
+    }
     READ_BUFF(&hdr, pp, sizeof(hdr));
     
     READ_BUFF(&roomid, pp, sizeof(roomid));
@@ -678,15 +684,16 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
 
     roomid = ntohl(roomid);
 
-    cli.current_room_id = roomid;
-    memcpy(cli.username, username, namelen);
-    cli.sockfd = -1;
+    newcli->current_room_id = roomid;
+    memcpy(newcli->username, username, namelen);
+    newcli->sockfd = -1;
+    newcli->next = NULL;
 
-    room = add_room_user(roomid, &cli);
+    room = add_room_user(roomid, newcli);
     if (room != NULL)
     {
         pthread_t thread;
-        if (pthread_create(&thread, NULL, thread_chatroom, (void*)room) == 0)
+        if (pthread_create(&thread, NULL, thread_chatroom, (void*)newcli) == 0)
         {
             if (pthread_detach(thread) == 0)
             {

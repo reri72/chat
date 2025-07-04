@@ -49,6 +49,25 @@ int create_chat_sock()
     return SUCCESS;
 }
 
+void broadcast_message(chatroom_t *room, int selfid, char *message, ssize_t len)
+{
+    chatclient_t * client = room->cli_head;
+    
+    while (client != NULL)
+    {
+        if (client->current_room_id != selfid)
+        {
+            if (send(client->sockfd, message, len, 0) == -1)
+            {
+                LOG_ERR("send to other client failed (user=%s, fd=%d)\n", 
+                                            client->username, client->sockfd);
+            }
+        }
+
+        client = client->next;
+    }
+}
+
 int chatroom_create(char *name, int isgroup)
 {
     pthread_mutex_lock(&mutex);
@@ -205,20 +224,23 @@ void destroy_chatroom()
     chatroom_t *tmp = NULL;
     while (room != NULL)
     {
-        int i = 0;
         if (room == NULL)
             break;
-
-        for (i = 0; i < room->user_count; i++)
+        
+        chatclient_t *cur = room->cli_head;
+        while (cur != NULL)
         {
-            memset(room->users->username, 0, sizeof(room->users->username));
-            room->users->current_room_id = -1;
+            memset(cur->username, 0, sizeof(cur->username));
+            cur->current_room_id = -1;
+            close_sock(&cur->sockfd);
+
+            cur = cur->next;
         }
         
         room->room_id = -1;
         memset(room->name, 0, sizeof(room->name));
         room->is_group = -1;
-        room->user_count = -1;
+        room->user_count = 0;
 
         tmp = room->next;
         free(room);
@@ -235,62 +257,59 @@ void destroy_chatroom()
     return;
 }
 
-chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
+void *thread_chatroom(void *arg)
 {
-    chatroom_t *room = (chatroom_t *)malloc(sizeof(chatroom_t));
-    if (room == NULL)
+    chatclient_t *cli = (chatclient_t *)arg;
+    chatroom_t *curroom = get_room_by_id(cli->current_room_id);
+
+    if (curroom == NULL)
     {
-        printf("allocation failed \n");
+        del_room_user(cli->current_room_id, cli);
         return NULL;
     }
 
-    room->room_id = room_id;
-    strncpy(room->name, name, sizeof(room->name) - 1);
-    room->is_group = is_group == GROUP_ROOM ? 1 : 0;
-    room->user_count = 0;
-    memset(room->users, 0, sizeof(room->users));
-    
-    return room;
-}
-
-void *thread_chatroom(void *arg)
-{
-    chatroom_t *room = (chatroom_t *)arg;
-
     struct sockaddr_in clnt_adr = {0,};
     socklen_t client_addr_size = sizeof(clnt_adr);
-    room->users[room->user_count-1].sockfd = accept(chat_sock, (struct sockaddr*)&clnt_adr, &client_addr_size);
+    cli->sockfd = accept(chat_sock, (struct sockaddr*)&clnt_adr, &client_addr_size);
 
-    if (room->users[room->user_count-1].sockfd == -1)
+    if (cli->sockfd == -1)
     {
         perror("accept() error");
-        del_room_user(room->room_id, &room->users[(room->user_count-1)]);
-        close_sock(&room->users[room->user_count-1].sockfd);
+        del_room_user(cli->current_room_id, cli);
         return NULL;
     }
     
     ssize_t bytes_read = 0;
     char buffer[BUFFER_SIZE] = {0,};
 
-    while ((bytes_read = recv(room->users[room->user_count-1].sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0)
+    while (1)
     {
+        bytes_read = recv(cli->sockfd, buffer, BUFFER_SIZE - 1, 0);
+
+        if (bytes_read <= 0)
+            break;
+
         buffer[bytes_read] = '\0';
         
-        for (int i = 0; i < room->user_count; i++)
+        if (bytes_read >= strlen("quit"))
         {
-            if (room->users[i].sockfd)
+            if (strstr(buffer, "quit") != NULL)
             {
-                if (send(room->users[i].sockfd, buffer, bytes_read, 0) == -1)
-                {
-                    perror("send to other client failed");
-                }
+                char byemsg[64] = {0,};
+                snprintf(byemsg, sizeof(byemsg), "[NOTICE] %s is exit.", cli->username);
+                broadcast_message(curroom, cli->current_room_id, byemsg, strlen(byemsg));
+                break;
             }
         }
-    }
 
-    close_sock(&room->users[room->user_count-1].sockfd);
+        broadcast_message(curroom, cli->current_room_id, buffer, bytes_read);
+
+        memset(buffer, 0, sizeof(buffer));
+    }
     
-    del_room_user(room->room_id, &room->users[(room->user_count-1)]);
+    LOG_INFO("User(%s) is exit a room(id=%d) \n", cli->username, cli->current_room_id);
+    
+    del_room_user(cli->current_room_id, cli);
 
     return NULL;
 }
@@ -329,6 +348,37 @@ void get_roomid_seq()
     mysql_free_result(result);
 }
 
+chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
+{
+    chatroom_t *room = (chatroom_t *)malloc(sizeof(chatroom_t));
+    if (room == NULL)
+    {
+        printf("allocation failed \n");
+        return NULL;
+    }
+
+    room->room_id = room_id;
+    strncpy(room->name, name, sizeof(room->name) - 1);
+    room->is_group = is_group == GROUP_ROOM ? 1 : 0;
+    
+    room->user_count = 0;
+    
+    return room;
+}
+
+chatroom_t *get_room_by_id(int id)
+{
+    chatroom_t *room = roomlist->head;
+    while (room != NULL)
+    {
+        if (room->room_id == id)
+            return room;
+        room = room->next;
+    }
+
+    return NULL;
+}
+
 chatroom_t *add_room_user(int room_id, chatclient_t *cli)
 {
     chatroom_t *room = roomlist->head;
@@ -346,8 +396,24 @@ chatroom_t *add_room_user(int room_id, chatclient_t *cli)
             else if (room->user_count >= 2 && room->is_group == 0)
                 return NULL;
             
-            memcpy(&room->users[room->user_count++], cli, sizeof(chatclient_t));            
+            chatclient_t *tmp = room->cli_head;
+            if (tmp == NULL)
+            {
+                room->cli_head = cli;
+                cli->next = NULL;
+            }
+            else
+            {
+                while (tmp != NULL)
+                {
+                    tmp = tmp->next;
+                }
+                tmp = cli;
+                tmp->next = NULL;                
+            }
+            
             ret = SUCCESS;
+
             break;
         }
         room = room->next;
@@ -361,5 +427,35 @@ chatroom_t *add_room_user(int room_id, chatclient_t *cli)
 
 void del_room_user(int room_id, chatclient_t *cli)
 {
-
+    if (roomlist != NULL)
+    {
+        chatroom_t *temp = roomlist->head;
+        while (temp != NULL)
+        {
+            if (temp->room_id == room_id)
+            {
+                int i = 0;
+                for (i = 0; i < temp->user_count; i++)
+                {
+                    chatclient_t *client = temp->cli_head;
+                    chatclient_t *prev = NULL;
+                    while (client != NULL)
+                    {
+                        if (strstr(client->username, cli->username) != NULL)
+                        {
+                            chatclient_t *tmp = client->next;
+                            close_sock(&client->sockfd);
+                            free(client);
+                            prev->next = tmp;
+                        }
+                        prev = client;
+                        client = client->next;
+                    }                    
+                }
+                break;
+            }
+            temp = temp->next;
+        }
+        
+    }
 }

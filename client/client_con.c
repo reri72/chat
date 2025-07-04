@@ -400,7 +400,7 @@ int parse_room_list_res(char *packet)
     {
         char *pp = packet + sizeof(proto_hdr_t);
         
-        LOG_DEBUG("%s", pp);
+        LOG_DEBUG("\n%s", pp);
         printf("%s", pp);
 
         return SUCCESS;
