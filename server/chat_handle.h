@@ -30,12 +30,11 @@ typedef struct
     chatroom_t *tail;
 } roomlist_t;
 
-
 // -----------------------------------------------------------------------------
 
 int create_chat_sock();
 
-void broadcast_message(chatroom_t *room, int selfid, char *message, ssize_t len);
+void broadcast_message(chatroom_t *room, int fd, char *message, ssize_t len);
 
 int chatroom_create(char *name, int isgroup);
 
