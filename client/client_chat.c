@@ -50,13 +50,13 @@ void running_chat()
         char send_msg[BUFFER_SIZE] = {0,};
 
         fgets(user_msg, BUFFER_SIZE, stdin);
-        if (strcmp(user_msg, "quit\n") == 0)
-            break;
-        
+
         snprintf(send_msg, BUFFER_SIZE-1, "%s: %s", username, user_msg);
 
         ssize_t sendto_len = send(tcp_client, send_msg, strlen(send_msg), 0);
-        if (sendto_len < 0)
+        if (sendto_len <= 0)
+            break;
+        else if (strstr(send_msg, "quit") != NULL)
             break;
     }
 
@@ -73,7 +73,7 @@ void *recv_msg(void *arg)
 {
     volatile int *run = (volatile int *)arg;
     
-    while (exit_flag == 0 || *run == 1)
+    while (exit_flag == 0 && *run == 1)
     {
         char rcv_msg[BUFFER_SIZE] = {0,};
 

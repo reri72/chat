@@ -680,12 +680,14 @@ void enterroom_process(char *packet, int8_t *qres, client_t *client)
     
     READ_BUFF(&roomid, pp, sizeof(roomid));
     READ_BUFF(&namelen, pp, sizeof(uint8_t));
-    READ_BUFF(username, pp, namelen);
+    READ_BUFF(username, pp, namelen+1);
+    username[namelen] = '\0';
 
     roomid = ntohl(roomid);
 
     newcli->current_room_id = roomid;
-    memcpy(newcli->username, username, namelen);
+    memcpy(newcli->username, username, namelen+1);
+    newcli->username[namelen] = '\0';
     newcli->sockfd = -1;
     newcli->next = NULL;
 
