@@ -419,8 +419,8 @@ char *enterroom_req(int *roomid, char *username, size_t *buflen)
 
     char *buffer = NULL;
     char *curp = NULL;
-    size_t totlen = sizeof(proto_hdr_t) + 
-                    + sizeof(roomid)
+    size_t totlen = sizeof(proto_hdr_t)
+                    + sizeof(int)
                     + namelen
                     + sizeof(uint8_t);
     

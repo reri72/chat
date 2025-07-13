@@ -42,6 +42,7 @@ clean:
 
 pkg:
 	mkdir -p pkg
+	mkdir -p pkg/log
 	cp chat_server pkg/
 	cp chat_client pkg/
 	cp etc/* pkg/
