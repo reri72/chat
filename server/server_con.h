@@ -3,6 +3,15 @@
 
 #include "reriutils.h"
 
+typedef struct usernode
+{
+    char id[MAX_ID_LENGTH];
+    struct usernode *next;
+} usernode_t;
+
+int8_t add_user_to_pool(const char *userid, int8_t len);
+void del_user_pool();
+
 int chat_server_init();
 int chat_server_end();
 

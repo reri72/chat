@@ -14,6 +14,10 @@
 
 SSL_CTX *ctx = NULL;
 
+usernode_t *user_pool = NULL;
+
+// ------------------------------------------------------------------
+
 void close_client_peer(client_t *client);
 
 // ------------------------------------------------------------------
@@ -45,6 +49,59 @@ extern char serverip[IP_LEN];
 extern unsigned short serverport;
 extern char certpath[CERT_PATH_LEN];
 extern char keypath[KEY_PATH_LEN];
+
+// -----------------------------------------------------------------------------
+
+int8_t add_user_to_pool(const char *userid, int8_t len)
+{
+    if (userid == NULL || len <= 0)
+        return FALSE;
+
+    usernode_t *cur = user_pool;
+    usernode_t *prev = NULL;
+
+    while (cur != NULL)
+    {
+        if (strlen(cur->id) == len && strncmp(userid, cur->id, len) == 0)
+            return FALSE;
+        prev = cur;
+        cur = cur->next;
+    }
+
+    usernode_t *new_node = (usernode_t*)calloc(1, sizeof(usernode_t));
+    if (new_node == NULL)
+        return FALSE;
+    
+    memcpy(new_node->id, userid, len);
+    new_node->id[len] = '\0';
+    new_node->next = NULL;
+
+    if (user_pool == NULL)
+    {
+        user_pool = new_node;
+    }
+    else
+    {
+        prev->next = new_node;
+    }
+
+    return SUCCESS;
+}
+
+void del_user_pool()
+{
+    usernode_t *tmp = user_pool;
+    usernode_t *nextnode = NULL;
+    while (tmp != NULL)
+    {
+        nextnode = tmp->next;
+        free(tmp);
+        tmp = nextnode;
+    }
+    user_pool = NULL;
+}
+
+// -----------------------------------------------------------------------------
 
 int chat_server_init()
 {
@@ -310,7 +367,8 @@ void *thread_accept_client(void* arg)
             }
         }
     }
-
+    
+    del_user_pool();
     LOG_DEBUG("[%s] end thread \n", __FUNCTION__);
     return NULL;
 }
@@ -527,6 +585,8 @@ void login_user_process(char *packet, int8_t *qres)
     READ_BUFF(passwd, pp, len);
 
     *qres = login_user(id, passwd);
+    if (*qres == SUCCESS)
+        *qres = add_user_to_pool(id, len);
 }
 
 int createroom_res(SSL *ssl, char *packet)
