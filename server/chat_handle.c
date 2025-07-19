@@ -16,7 +16,7 @@
 
 // ------------------------------------------------------------------
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+extern pthread_mutex_t room_lock;
 
 extern volatile sig_atomic_t exit_flag;
 extern MYSQL *conn;
@@ -70,21 +70,20 @@ void broadcast_message(chatroom_t *room, int fd, char *message, ssize_t len)
 
 int chatroom_create(char *name, int isgroup)
 {
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&room_lock);
     {
         if (roomlist->size >= MAX_ROOMS)
         {
             LOG_WARN("chatroom is full\n");
-            pthread_mutex_unlock(&mutex);
+            pthread_mutex_unlock(&room_lock);
             return FAILED;
         }
 
         chatroom_t *room = setup_room(g_roomid, name, isgroup, 1);
-
         if (room == NULL)
         {
             LOG_WARN("Failed to setup room\n");
-            pthread_mutex_unlock(&mutex);
+            pthread_mutex_unlock(&room_lock);
             return FAILED;
         }
 
@@ -102,7 +101,7 @@ int chatroom_create(char *name, int isgroup)
         }
         roomlist->size++;
     }
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&room_lock);
 
     return SUCCESS;
 }
@@ -113,33 +112,31 @@ void list_up_room(char *buff, unsigned int *buflen)
 
     *buflen = 0;
 
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&room_lock);
+    chatroom_t *curroom = roomlist->head;
+    while (curroom != NULL)
     {
-        chatroom_t *curroom = roomlist->head;
-        while (curroom != NULL)
+        char line[512] = {0,};
+        int line_len = 0;
+
+        line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
+                            curroom->room_id,
+                            curroom->name,
+                            curroom->is_group ? "Group" : "1:1",
+                            curroom->user_count);
+
+        if (buff_offset + line_len < 60000)
         {
-            char line[512] = {0,};
-            int line_len = 0;
-
-            line_len = snprintf(line, sizeof(line), "[room id:%d] name : %s (%s) - in %d person(s)\n",
-                                curroom->room_id,
-                                curroom->name,
-                                curroom->is_group ? "Group" : "1:1",
-                                curroom->user_count);
-
-            if (buff_offset + line_len < 60000)
-            {
-                memcpy(buff + buff_offset, line, line_len);
-                buff_offset += line_len;
-            }
-            else
-            {
-                break;
-            }
-            curroom = curroom->next;
+            memcpy(buff + buff_offset, line, line_len);
+            buff_offset += line_len;
         }
+        else
+        {
+            break;
+        }
+        curroom = curroom->next;
     }
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&room_lock);
 
     *buflen = buff_offset;
 }
@@ -195,21 +192,25 @@ int load_chatroom(int max)
         if (room == NULL)
             break;
 
-        if (roomlist->head == NULL)
+        pthread_mutex_lock(&room_lock);
         {
-            roomlist->head = room;
-            roomlist->tail = room;
-            cur = roomlist->head;
-            room->next = NULL;            
+            if (roomlist->head == NULL)
+            {
+                roomlist->head = room;
+                roomlist->tail = room;
+                cur = roomlist->head;
+                room->next = NULL;            
+            }
+            else
+            {
+                cur->next = room;
+                roomlist->tail = room;
+                roomlist->tail->next = NULL;
+                cur = room;
+            }
+            roomlist->size++;
         }
-        else
-        {
-            cur->next = room;
-            roomlist->tail = room;
-            roomlist->tail->next = NULL;
-            cur = room;
-        }
-        roomlist->size++;
+        pthread_mutex_unlock(&room_lock);
     }
 
     mysql_free_result(result);
@@ -221,7 +222,7 @@ void destroy_chatroom()
 {
     if (roomlist == NULL)
         return;
-    
+
     chatroom_t *room = roomlist->head;
     chatroom_t *tmp = NULL;
     while (room != NULL)
@@ -372,13 +373,18 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
 
 chatroom_t *get_room_by_id(int id)
 {
+    pthread_mutex_lock(&room_lock);
     chatroom_t *room = roomlist->head;
     while (room != NULL)
     {
         if (room->room_id == id)
+        {
+            pthread_mutex_unlock(&room_lock);
             return room;
+        }
         room = room->next;
     }
+    pthread_mutex_unlock(&room_lock);
 
     return NULL;
 }
@@ -390,15 +396,21 @@ chatroom_t *add_room_user(int room_id, chatclient_t *cli)
     
     if (roomlist->size < 1)
         return NULL;
-    
+    pthread_mutex_lock(&room_lock);
     while (room != NULL)
     {
         if (room->room_id == room_id)
         {
             if (room->user_count >= MAX_USERS_PER_ROOM && room->is_group == 1)
+            {
+                pthread_mutex_unlock(&room_lock);
                 return NULL;
+            }
             else if (room->user_count >= 2 && room->is_group == 0)
+            {
+                pthread_mutex_unlock(&room_lock);
                 return NULL;
+            }
             
             chatclient_t *tmp = room->cli_head;
             if (tmp == NULL)
@@ -426,7 +438,8 @@ chatroom_t *add_room_user(int room_id, chatclient_t *cli)
         }
         room = room->next;
     }
-    
+    pthread_mutex_unlock(&room_lock);
+
     if (ret == SUCCESS)
         return room;
 
@@ -437,6 +450,7 @@ void del_room_user(int room_id, chatclient_t *cli)
 {
     if (roomlist != NULL)
     {
+        pthread_mutex_lock(&room_lock);
         chatroom_t *temp = roomlist->head;
         while (temp != NULL)
         {
@@ -470,6 +484,6 @@ void del_room_user(int room_id, chatclient_t *cli)
             }
             temp = temp->next;
         }
-        
+        pthread_mutex_unlock(&room_lock);
     }
 }

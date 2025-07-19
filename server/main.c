@@ -17,6 +17,9 @@ extern int chat_server_end();
 extern MYSQL *conn;
 extern _logset _loglevel;
 
+pthread_mutex_t room_lock;
+pthread_mutex_t user_pool_lock;
+
 volatile sig_atomic_t exit_flag = 0;
 
 void sighandle(int signum, siginfo_t *info, void *context);
@@ -30,6 +33,9 @@ int main(int argc, char **argv)
 
     memset(&sa, 0, sizeof(sa));
     memset(&sa_pipe, 0, sizeof(sa_pipe));
+    
+    pthread_mutex_init(&user_pool_lock, NULL);
+    pthread_mutex_init(&room_lock, NULL);
 
     if (getcwd(pwd, sizeof(pwd)) == NULL)
     {
@@ -96,6 +102,10 @@ int main(int argc, char **argv)
 
     chat_server_end();
     destroy_chatroom();
+
+    pthread_mutex_destroy(&room_lock);
+    pthread_mutex_destroy(&user_pool_lock);
+
     destroy_log();
     mysql_close(conn);
     mysql_library_end();

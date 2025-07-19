@@ -15,6 +15,7 @@
 SSL_CTX *ctx = NULL;
 
 usernode_t *user_pool = NULL;
+extern pthread_mutex_t user_pool_lock;
 
 // ------------------------------------------------------------------
 
@@ -24,8 +25,8 @@ void close_client_peer(client_t *client);
 int join_con_res(SSL *ssl, char *packet);
 void join_user_process(char *packet, int8_t *qres);
 
-int user_login_res(SSL *ssl, char *packet);
-void login_user_process(char *packet, int8_t *qres);
+int user_login_res(SSL *ssl, char *packet, client_t *client);
+void login_user_process(char *packet, int8_t *qres, client_t *client);
 
 int createroom_res(SSL *ssl, char *packet);
 void createroom_process(char *packet, int8_t *qres);
@@ -60,17 +61,26 @@ int8_t add_user_to_pool(const char *userid, int8_t len)
     usernode_t *cur = user_pool;
     usernode_t *prev = NULL;
 
+    pthread_mutex_lock(&user_pool_lock);
+
     while (cur != NULL)
     {
         if (strlen(cur->id) == len && strncmp(userid, cur->id, len) == 0)
+        {
+            pthread_mutex_unlock(&user_pool_lock);
             return FALSE;
+        }
+            
         prev = cur;
         cur = cur->next;
     }
 
     usernode_t *new_node = (usernode_t*)calloc(1, sizeof(usernode_t));
     if (new_node == NULL)
+    {
+        pthread_mutex_unlock(&user_pool_lock);
         return FALSE;
+    }        
     
     memcpy(new_node->id, userid, len);
     new_node->id[len] = '\0';
@@ -85,13 +95,54 @@ int8_t add_user_to_pool(const char *userid, int8_t len)
         prev->next = new_node;
     }
 
+    pthread_mutex_unlock(&user_pool_lock);
+
     return SUCCESS;
+}
+
+void pop_user_pool(client_t *client)
+{
+    if (client == NULL)
+        return;
+
+    pthread_mutex_lock(&user_pool_lock);
+
+    usernode_t *cur = user_pool;
+    usernode_t *prev = NULL;
+
+    while (cur != NULL)
+    {
+        if (strcmp(client->id, cur->id) == 0)
+        {
+            usernode_t *del_node = cur;
+            if (prev == NULL)   // head
+            {
+                user_pool = cur->next;
+                cur = user_pool;
+            }
+            else
+            {
+                prev->next = cur->next;
+                cur = cur->next;
+            }
+            free(del_node);
+            break;
+        }
+        else
+        {
+            prev = cur;
+            cur = cur->next;
+        }
+    }
+    pthread_mutex_unlock(&user_pool_lock);
 }
 
 void del_user_pool()
 {
     usernode_t *tmp = user_pool;
     usernode_t *nextnode = NULL;
+
+    pthread_mutex_lock(&user_pool_lock);
     while (tmp != NULL)
     {
         nextnode = tmp->next;
@@ -99,6 +150,7 @@ void del_user_pool()
         tmp = nextnode;
     }
     user_pool = NULL;
+    pthread_mutex_unlock(&user_pool_lock);
 }
 
 // -----------------------------------------------------------------------------
@@ -437,7 +489,7 @@ void *thread_server_communication(void* arg)
                 } break;
             case PROTO_LOGIN_USER:
                 {
-                    if (user_login_res(ssl, packet))
+                    if (user_login_res(ssl, packet, client))
                         LOG_DEBUG("login response success \n");
                 } break;
             case PROTO_CREATE_ROOM:
@@ -463,6 +515,7 @@ void *thread_server_communication(void* arg)
     }
     
     LOG_DEBUG("close client : %s \n ", client->ip);
+    pop_user_pool(client);
     close_client_peer(client);
     
     return NULL;
@@ -524,7 +577,7 @@ void join_user_process(char *packet, int8_t *qres)
     *qres = join_user(id, passwd);
 }
 
-int user_login_res(SSL *ssl, char *packet)
+int user_login_res(SSL *ssl, char *packet, client_t *client)
 {
     int ret = FAILED;
     char *buffer = NULL, *pp = NULL;
@@ -548,7 +601,7 @@ int user_login_res(SSL *ssl, char *packet)
 
     WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
 
-    login_user_process(packet, &qres);
+    login_user_process(packet, &qres, client);
 
     WRITE_BUFF(pp, &qres, sizeof(qres));
     
@@ -559,7 +612,7 @@ int user_login_res(SSL *ssl, char *packet)
     return ret;
 }
 
-void login_user_process(char *packet, int8_t *qres)
+void login_user_process(char *packet, int8_t *qres, client_t *client)
 {
     char *pp = packet;
 
@@ -587,6 +640,9 @@ void login_user_process(char *packet, int8_t *qres)
     *qres = login_user(id, passwd);
     if (*qres == SUCCESS)
         *qres = add_user_to_pool(id, len);
+    
+    if (*qres == SUCCESS)
+        memcpy(client->id, id, sizeof(client->id));
 }
 
 int createroom_res(SSL *ssl, char *packet)

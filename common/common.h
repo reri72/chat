@@ -56,6 +56,7 @@ typedef struct proto_hdr
 
 typedef struct client
 {
+    char id[MAX_ID_LENGTH];
     char ip[16];
     unsigned int ipaddr;
     int sockfd;
