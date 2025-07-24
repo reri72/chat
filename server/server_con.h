@@ -20,7 +20,7 @@ int send_data(SSL *ssl, char *data, size_t len);
 
 // -----------------------------------------------------------------------------
 #define THREAD_POOL_SIZE    5
-#define THREAD_COUNT        2
+#define THREAD_COUNT        3
 
 void *thread_accept_client(void* arg);
 void *thread_delete_old_client(void *arg);

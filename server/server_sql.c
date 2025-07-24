@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common.h"
 #include "server_sql.h"
 #include "reriutils.h"
 
@@ -35,7 +36,7 @@ int join_user(const char *id, const char *passwd)
     if (mysql_query(conn, query))
     {
         LOG_WARN("query failed: %s\n", mysql_error(conn));
-        free(base64passwd);
+        FREE(base64passwd);
         return -1;
     }
 
@@ -43,7 +44,7 @@ int join_user(const char *id, const char *passwd)
     if (result == NULL)
     {
         LOG_WARN("mysql_store_result() failed: %s\n", mysql_error(conn));
-        free(base64passwd);
+        FREE(base64passwd);
         return -1;
     }
 
@@ -51,7 +52,7 @@ int join_user(const char *id, const char *passwd)
     if (row)
     {
         LOG_WARN("already exist user : %s \n", id);
-        free(base64passwd);
+        FREE(base64passwd);
         mysql_free_result(result);
         return -1;
     }
@@ -66,11 +67,11 @@ int join_user(const char *id, const char *passwd)
     if (mysql_query(conn, query))
     {
         LOG_WARN("query failed: %s\n", mysql_error(conn));
-        free(base64passwd);
+        FREE(base64passwd);
         return -1;
     }
     
-    free(base64passwd);
+    FREE(base64passwd);
     
     return 0;
 }
@@ -104,7 +105,7 @@ int login_user(const char *id, const char *passwd)
     if (mysql_query(conn, query))
     {
         LOG_WARN("query failed: %s\n", mysql_error(conn));
-        free(base64passwd);
+        FREE(base64passwd);
         return ret;
     }
 
@@ -112,7 +113,7 @@ int login_user(const char *id, const char *passwd)
     if (result == NULL)
     {
         LOG_WARN("mysql_store_result() failed: %s\n", mysql_error(conn));
-        free(base64passwd);
+        FREE(base64passwd);
         return ret;
     }
 
@@ -120,7 +121,7 @@ int login_user(const char *id, const char *passwd)
     if (!row)
     {
         LOG_WARN("not exist user : %s \n", id);
-        free(base64passwd);
+        FREE(base64passwd);
         mysql_free_result(result);
         return ret;
     }
@@ -142,7 +143,7 @@ int login_user(const char *id, const char *passwd)
     
     mysql_free_result(result);
     
-    free(base64passwd);
+    FREE(base64passwd);
     
     return ret;
 }

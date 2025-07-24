@@ -30,6 +30,55 @@ int g_roomid = 0;
 
 extern int chat_sock;
 
+void *thread_delete_old_room(void *arg)
+{
+    time_t last_time = time(NULL);
+
+    while (exit_flag == 0)
+    {
+        time_t curtime = time(NULL);
+
+        if ((curtime - last_time) >= 5)
+        {
+            pthread_mutex_lock(&room_lock);
+            {
+                chatroom_t *cur = roomlist->head;
+                chatroom_t *prev = NULL;
+
+                while (cur != NULL)
+                {
+                    if ( (curtime - cur->create_time) >= A_TIME)
+                    {
+                        chatroom_t *delroom = cur;
+                        if (prev == NULL)   // head 인 경우
+                        {
+                            roomlist->head = cur->next;
+                            cur = roomlist->head;
+                        }
+                        else
+                        {
+                            prev->next = cur->next;
+                            cur = prev->next;
+                        }
+                        FREE(delroom);
+                    }
+                    else
+                    {
+                        prev = cur;
+                        cur = cur->next;
+                    }
+                }
+            }
+            pthread_mutex_unlock(&room_lock);
+
+            last_time = curtime;
+        }
+        nano_sleep(1,0);
+    }
+
+    return NULL;
+}
+
 int create_chat_sock()
 {
     chat_sock = create_sock(AF_INET, SOCK_STREAM, 0);
@@ -79,7 +128,7 @@ int chatroom_create(char *name, int isgroup)
             return FAILED;
         }
 
-        chatroom_t *room = setup_room(g_roomid, name, isgroup, 1);
+        chatroom_t *room = setup_room(g_roomid, name, isgroup);
         if (room == NULL)
         {
             LOG_WARN("Failed to setup room\n");
@@ -187,8 +236,7 @@ int load_chatroom(int max)
         
         chatroom_t *room = setup_room(strtol(row[0], NULL, 10), 
                                         row[2], 
-                                        strtol(row[1], NULL, 10),
-                                        0);
+                                        strtol(row[1], NULL, 10));
         if (room == NULL)
             break;
 
@@ -240,13 +288,8 @@ void destroy_chatroom()
             cur = cur->next;
         }
         
-        room->room_id = -1;
-        memset(room->name, 0, sizeof(room->name));
-        room->is_group = -1;
-        room->user_count = 0;
-
         tmp = room->next;
-        free(room);
+        FREE(room);
         room = tmp;
     }
 
@@ -255,7 +298,7 @@ void destroy_chatroom()
     roomlist->max = 0;
     roomlist->size = 0;
 
-    free(roomlist);
+    FREE(roomlist);
     
     return;
 }
@@ -351,7 +394,7 @@ void get_roomid_seq()
     mysql_free_result(result);
 }
 
-chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
+chatroom_t *setup_room(int room_id, char *name, int is_group)
 {
     chatroom_t *room = (chatroom_t *)malloc(sizeof(chatroom_t));
     if (room == NULL)
@@ -364,6 +407,7 @@ chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count)
     strncpy(room->name, name, sizeof(room->name) - 1);
     room->is_group = is_group == GROUP_ROOM ? 1 : 0;
     room->user_count = 0;
+    room->create_time = time(NULL);
 
     room->cli_head = NULL;
     room->next = NULL;
@@ -467,7 +511,7 @@ void del_room_user(int room_id, chatclient_t *cli)
                         {
                             chatclient_t *tmp = client->next;
                             close_sock(&client->sockfd);
-                            free(client);
+                            FREE(client);
                             if (prev == NULL)
                                 temp->cli_head = tmp;
                             else

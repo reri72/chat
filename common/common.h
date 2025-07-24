@@ -46,6 +46,7 @@
 #define A_YEAR  (60*60*24*360)
 #define A_MONTH (60*60*24*30)
 #define A_DAY   (60*60*24)
+#define A_TIME  (60*60)
 
 typedef struct proto_hdr
 {

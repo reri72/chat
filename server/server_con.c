@@ -125,7 +125,7 @@ void pop_user_pool(client_t *client)
                 prev->next = cur->next;
                 cur = cur->next;
             }
-            free(del_node);
+            FREE(del_node);
             break;
         }
         else
@@ -146,7 +146,7 @@ void del_user_pool()
     while (tmp != NULL)
     {
         nextnode = tmp->next;
-        free(tmp);
+        FREE(tmp);
         tmp = nextnode;
     }
     user_pool = NULL;

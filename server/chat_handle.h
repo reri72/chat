@@ -18,6 +18,8 @@ typedef struct chatroom_t
     int user_count;
     char name[100];
     int is_group;  // 0: 1:1, 1: 그룹
+    time_t create_time;
+
     chatclient_t *cli_head;
     struct chatroom_t *next;
 } chatroom_t;
@@ -31,6 +33,8 @@ typedef struct
 } roomlist_t;
 
 // -----------------------------------------------------------------------------
+
+void *thread_delete_old_room(void *arg);
 
 int create_chat_sock();
 
@@ -48,7 +52,7 @@ void *thread_chatroom(void *arg);
 
 void get_roomid_seq();
 
-chatroom_t *setup_room(int room_id, char *name, int is_group, int user_count);
+chatroom_t *setup_room(int room_id, char *name, int is_group);
 
 chatroom_t *get_room_by_id(int id);
 

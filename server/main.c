@@ -85,7 +85,9 @@ int main(int argc, char **argv)
     }
     
     pthread_t threads[THREAD_POOL_SIZE] = {0,};
-    void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, thread_delete_old_client};
+    void* (*functions[THREAD_COUNT])(void*) = { thread_accept_client, 
+                                                thread_delete_old_client, 
+                                                thread_delete_old_room};
     
     int i;
     for (i = 0; i < THREAD_COUNT; i++)
