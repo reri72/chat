@@ -27,8 +27,10 @@
 #define MAX_PASSWORD_LENGTH 50
 #define MAX_ROOMTITLE_LENGTH 100
 
+
 #define PROTO_CREATE_USER       100
 #define PROTO_LOGIN_USER        101
+#define PROTO_LOGOUT_USER       102
 
 #define PROTO_CREATE_ROOM       200
 #define PROTO_ROOM_LIST         201
@@ -40,8 +42,10 @@
 
 #define MAX_ROOMS   50
 
-#define PROTO_REQ   0
-#define PROTO_RES   1
+#define PROTO_REQ       1
+#define PROTO_RES       2
+#define PROTO_NOTI      3
+#define PROTO_NOTIRES   4
 
 #define A_YEAR  (60*60*24*360)
 #define A_MONTH (60*60*24*30)

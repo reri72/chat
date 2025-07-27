@@ -46,12 +46,12 @@ void running_chat()
 
     while (exit_flag == 0 || run == 1)
     {
-        char user_msg[BUFFER_SIZE] = {0,};
-        char send_msg[BUFFER_SIZE] = {0,};
+        char user_msg[(BUFFER_SIZE-50)] = {0,};
+        char send_msg[(BUFFER_SIZE-50)] = {0,};
 
-        fgets(user_msg, BUFFER_SIZE, stdin);
+        fgets(user_msg, (BUFFER_SIZE-50), stdin);
 
-        snprintf(send_msg, BUFFER_SIZE-1, "%s: %s", username, user_msg);
+        snprintf(send_msg, (BUFFER_SIZE-25), "%s: %s", username, user_msg);
 
         ssize_t sendto_len = send(tcp_client, send_msg, strlen(send_msg), 0);
         if (sendto_len <= 0)

@@ -18,6 +18,6 @@ int login();
 void join();
 int join_chatroom(int *roomid);
 int enter_chatroom(int *roomid);
-void logout();
+int logout();
 
 #endif

@@ -307,6 +307,42 @@ int parse_login_res(char *packet)
     return res;
 }
 
+char *logout_req(int *buflen)
+{
+    proto_hdr_t hdr = {0,};
+
+    char *buffer = NULL;
+
+    hdr.proto   = htons(PROTO_LOGOUT_USER);
+    hdr.flag    = PROTO_NOTI;
+    hdr.bodylen = 0;
+
+    buffer = (char *)calloc(1, sizeof(hdr));
+    if (buffer == NULL)
+        return NULL;
+    
+    memcpy(buffer, &hdr, sizeof(hdr));
+
+    *buflen = sizeof(hdr);
+
+    return buffer;
+}
+
+int parse_logout_res(char *packet)
+{
+    char *ptr = packet;
+    int8_t res = FAILED;
+    proto_hdr_t hdr = {0,};
+
+    memcpy(&hdr, ptr, sizeof(hdr));
+    ptr += sizeof(proto_hdr_t);
+
+    if ( ntohl(hdr.bodylen) == sizeof(int8_t))
+        memcpy(&res, ptr, sizeof(int8_t));
+    
+    return res;
+}
+
 char* createroom_req(int type, char *title, char *username, int *buflen)
 {
     proto_hdr_t hdr = {0,};

@@ -28,6 +28,8 @@ void join_user_process(char *packet, int8_t *qres);
 int user_login_res(SSL *ssl, char *packet, client_t *client);
 void login_user_process(char *packet, int8_t *qres, client_t *client);
 
+int user_logout_res(SSL *ssl, client_t *client);
+
 int createroom_res(SSL *ssl, char *packet);
 void createroom_process(char *packet, int8_t *qres);
 
@@ -100,10 +102,11 @@ int8_t add_user_to_pool(const char *userid, int8_t len)
     return SUCCESS;
 }
 
-void pop_user_pool(client_t *client)
+int pop_user_pool(client_t *client)
 {
+    int ret = FAILED;
     if (client == NULL)
-        return;
+        return ret;
 
     pthread_mutex_lock(&user_pool_lock);
 
@@ -126,6 +129,7 @@ void pop_user_pool(client_t *client)
                 cur = cur->next;
             }
             FREE(del_node);
+            ret = SUCCESS;
             break;
         }
         else
@@ -135,6 +139,8 @@ void pop_user_pool(client_t *client)
         }
     }
     pthread_mutex_unlock(&user_pool_lock);
+
+    return ret;
 }
 
 void del_user_pool()
@@ -492,6 +498,12 @@ void *thread_server_communication(void* arg)
                     if (user_login_res(ssl, packet, client))
                         LOG_DEBUG("login response success \n");
                 } break;
+            case PROTO_LOGOUT_USER:
+                {
+                    if (user_logout_res(ssl, client))
+                        LOG_DEBUG("logout response success \n");
+                    pop_user_pool(client);
+                } break;
             case PROTO_CREATE_ROOM:
                 {
                     if (createroom_res(ssl, packet))
@@ -512,6 +524,7 @@ void *thread_server_communication(void* arg)
             default:
                 break;
         }
+        memset(packet, 0, sizeof(packet));
     }
     
     LOG_DEBUG("close client : %s \n ", client->ip);
@@ -643,6 +656,37 @@ void login_user_process(char *packet, int8_t *qres, client_t *client)
     
     if (*qres == SUCCESS)
         memcpy(client->id, id, sizeof(client->id));
+}
+
+int user_logout_res(SSL *ssl, client_t *client)
+{
+    int8_t ret = FAILED;
+    char *buffer = NULL, *pp = NULL;
+    size_t totlen = sizeof(ret) + sizeof(proto_hdr_t);
+
+    proto_hdr_t hdr;
+    memset(&hdr, 0, sizeof(proto_hdr_t));
+    
+    ret = pop_user_pool(client);
+
+    buffer = (char *)malloc(totlen);
+    if (buffer == NULL)
+        return FAILED;
+
+    hdr.proto   = htons(PROTO_LOGOUT_USER);
+    hdr.flag    = PROTO_NOTIRES;
+    hdr.bodylen = htonl(sizeof(int8_t));
+
+    pp = buffer;
+
+    WRITE_BUFF(pp, &hdr, sizeof(proto_hdr_t));
+    WRITE_BUFF(pp, &ret, sizeof(ret));
+
+    ret = send_data(ssl, buffer, totlen);
+
+    FREE(buffer);
+
+    return ret;
 }
 
 int createroom_res(SSL *ssl, char *packet)

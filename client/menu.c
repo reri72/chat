@@ -375,8 +375,9 @@ int login()
             {
                 if (recv_data(recvpkt, pktsz))
                 {
-                    if ( (ret = parse_login_res(recvpkt)) == SUCCESS )
+                    if ( parse_login_res(recvpkt) == SUCCESS )
                     {
+                        ret = SUCCESS;
                         LOG_DEBUG("login success \n");
                         memcpy(username, id, strlen(id));
                     }
@@ -443,7 +444,43 @@ void join()
     nano_sleep(3,0);
 }
 
-void logout()
+int logout()
 {
-    memset(&username, 0, sizeof(username));
+    char *buffer = NULL;
+    int len = 0;
+    int ret = FAILED;
+
+    buffer = logout_req(&len);
+    if (!buffer)
+    {
+        LOG_ERR("logout failed \n");
+        return FAILED;
+    }
+
+    if (send_data(buffer, len) != -1)
+    {
+        size_t pktsz = (sizeof(proto_hdr_t) + sizeof(int8_t));
+        char *recvpkt = (char *)malloc(pktsz);
+        if (recvpkt)
+        {
+            if (recv_data(recvpkt, pktsz))
+            {
+                if ( parse_logout_res(recvpkt) == SUCCESS )
+                {
+                    ret = SUCCESS;
+                    LOG_INFO("logout success \n");
+                }
+            }
+            FREE(recvpkt);
+        }
+    }
+    FREE(buffer);
+
+    if (ret == FAILED)
+    {
+        LOG_INFO("logout failed \n");
+        nano_sleep(2,0);
+    }
+
+    return ret;
 }

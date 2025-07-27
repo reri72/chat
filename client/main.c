@@ -76,9 +76,12 @@ int main(int argc, char **argv)
             }
             case HOME_LOGOUT:
             {
-                logout();
-                loginok = -1;
-                break;
+                if (logout() == SUCCESS)
+                {
+                    memset(&username, 0, sizeof(username));
+                    loginok = -1;
+                    break;
+                }
             }
             case HOME_CHAT:
             {
