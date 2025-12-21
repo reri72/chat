@@ -14,6 +14,7 @@ volatile sig_atomic_t exit_flag = 0;
 char username[MAX_ID_LENGTH] = {0,};
 
 extern void fill_client_conf_value();
+extern void echo_on_terminal();
 extern _logset _loglevel;
 
 void sighandle(int signum, siginfo_t *info, void *context);
@@ -145,6 +146,7 @@ void sighandle(int signum, siginfo_t *info, void *context)
         LOG_ERR("signal code: %d\n", info->si_code);
     }
 
+    echo_on_terminal(); // 터미널 복구
     exit_flag = 1;
     chat_client_end();
     destroy_log();
