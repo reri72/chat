@@ -110,7 +110,7 @@ void server_db_configure()
     if (mysql_query(conn, db_query))
     {
         LOG_ERR("query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        if (conn) mysql_close(conn);
         exit(1);
     }
 
@@ -118,7 +118,7 @@ void server_db_configure()
     if (mysql_query(conn, db_use_query))
     {
         LOG_ERR("query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        if (conn) mysql_close(conn);
         exit(1);
     }
 
@@ -132,7 +132,7 @@ void server_db_configure()
     if (mysql_query(conn, db_client_query))
     {
         LOG_ERR("query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        if (conn) mysql_close(conn);
         exit(1);
     }
 
@@ -147,7 +147,7 @@ void server_db_configure()
     if (mysql_query(conn, db_chatroom_query))
     {
         LOG_ERR("query failed: %s\n", mysql_error(conn));
-        mysql_close(conn);
+        if (conn) mysql_close(conn);
         exit(1);
     }
 }

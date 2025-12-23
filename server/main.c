@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     pthread_mutex_destroy(&user_pool_lock);
 
     destroy_log();
-    mysql_close(conn);
+    if (conn) mysql_close(conn);
     mysql_library_end();
 
     return 0;
