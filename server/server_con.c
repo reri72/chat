@@ -253,12 +253,13 @@ int receive_data(SSL *ssl, char *buffer, size_t bufsize)
         int ret = select(SSL_get_fd(ssl) + 1, &readfds, NULL, NULL, &tv);
         if (ret == -1)
         {
+            if (errno == EINTR)
+                continue;
             perror("select");
             break;
         }
         else if (ret == 0)
         {
-            nano_sleep(0, 100000000);
             continue;
         }
 
@@ -298,6 +299,8 @@ int send_data(SSL *ssl, char *data, size_t len)
 
         if (select(SSL_get_fd(ssl) + 1, NULL, &wfds, NULL, &tv) <= 0)
         {
+            if (errno == EINTR)
+                continue;
             perror("select");
             break;
         }
@@ -351,6 +354,9 @@ void *thread_accept_client(void* arg)
         int ret = select(server_sock + 1, &readfds, NULL, NULL, &tm);
         if (ret < 0)
         {
+            if (errno == EINTR)
+                continue;
+            perror("select");
             break;
         }
         else if (ret == 0)

@@ -167,6 +167,8 @@ int recv_data(char *buffer, int bufsize)
         int ret = select(client_sock + 1, &readfds, NULL, NULL, &tv);
         if (ret == -1)
         {
+            if (errno == EINTR)
+                continue;
             perror("select");
             exit_flag = 1;
             break;
